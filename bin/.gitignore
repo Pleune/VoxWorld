@@ -1,0 +1,7 @@
+*
+!.gitignore
+!shaders
+!shaders/**
+!resources
+!resources/**
+**/*.swp

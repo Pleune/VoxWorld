@@ -47,6 +47,8 @@ public:
     explicit Logger();
     ~Logger();
 
+	static Logger stdout;
+
     void set_print_level(level);
 
     std::unique_ptr<Logger::MessageStream> log(level log_level);

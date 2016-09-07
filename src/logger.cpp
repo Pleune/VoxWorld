@@ -3,6 +3,8 @@
 #include <iostream>
 #include <iomanip>
 
+Logger Logger::stdout;
+
 Logger::MessageStream::~MessageStream()
 {
     std::shared_ptr<Message> message = std::shared_ptr<Message> (new Message);

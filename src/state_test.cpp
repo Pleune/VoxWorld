@@ -1,34 +1,33 @@
 #include "state_test.hpp"
 
-#include <iostream>
-
+#include "logger.hpp"
 
 StateTest *StateTest::instance_ = NULL;
 StateTest::StateTest()
 {
-	std::cout << "StateTest::StateTest()" << std::endl;
+	Logger::stdout.log(Logger::DEBUG) << "StateTest::StateTest()" << Logger::MessageStream::endl;
 }
 
 GameState::Status StateTest::init(GameEngine *engine)
 {
-	std::cout << "StateTest::init()" << std::endl;
+	Logger::stdout.log(Logger::DEBUG) << "StateTest::init()" << Logger::MessageStream::endl;
 	return OK;
 }
 
 void StateTest::cleanup(GameEngine *engine)
 {
-	std::cout << "StateTest::cleanup()" << std::endl;
+	Logger::stdout.log(Logger::DEBUG) << "StateTest::cleanup()" << Logger::MessageStream::endl;
 }
 
 GameState::Status StateTest::resume(GameEngine *engine)
 {
-	std::cout << "StateTest::resume()" << std::endl;
+	Logger::stdout.log(Logger::DEBUG) << "StateTest::resume()" << Logger::MessageStream::endl;
 	return OK;
 }
 
 GameState::Status StateTest::pause(GameEngine *engine)
 {
-	std::cout << "StateTest::pause()" << std::endl;
+	Logger::stdout.log(Logger::DEBUG) << "StateTest::pause()" << Logger::MessageStream::endl;
 	return OK;
 }
 
@@ -39,12 +38,12 @@ void StateTest::run(GameEngine *engine)
 	if(i > 10)
 	    engine->queue_pop();
 
-	std::cout << "StateTest::run()" << std::endl;
+	Logger::stdout.log(Logger::DEBUG) << "StateTest::run()" << Logger::MessageStream::endl;
 }
 
 void StateTest::event(GameEngine *engine, SDL_Event *e)
 {
-	std::cout << "StateTest::event()" << std::endl;
+	Logger::stdout.log(Logger::DEBUG) << "StateTest::event()" << Logger::MessageStream::endl;
 }
 
 StateTest *StateTest::instance()

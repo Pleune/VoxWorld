@@ -1,5 +1,6 @@
 #include "state_test.hpp"
 
+#include <SDL.h>
 #include "logger.hpp"
 
 StateTest *StateTest::instance_ = NULL;
@@ -8,24 +9,24 @@ StateTest::StateTest()
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::StateTest()" << Logger::MessageStream::endl;
 }
 
-GameState::Status StateTest::init(GameEngine *engine)
+GameState::Status StateTest::init()
 {
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::init()" << Logger::MessageStream::endl;
 	return OK;
 }
 
-void StateTest::cleanup(GameEngine *engine)
+void StateTest::cleanup()
 {
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::cleanup()" << Logger::MessageStream::endl;
 }
 
-GameState::Status StateTest::resume(GameEngine *engine)
+GameState::Status StateTest::resume()
 {
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::resume()" << Logger::MessageStream::endl;
 	return OK;
 }
 
-GameState::Status StateTest::pause(GameEngine *engine)
+GameState::Status StateTest::pause()
 {
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::pause()" << Logger::MessageStream::endl;
 	return OK;
@@ -36,14 +37,21 @@ void StateTest::run(GameEngine *engine)
 	static int i = 0;
 	i++;
 	if(i > 10)
-	    engine->queue_pop();
+        engine->queue_pop();
 
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::run()" << Logger::MessageStream::endl;
+
+    SDL_Delay(300);
 }
 
-void StateTest::event(GameEngine *engine, SDL_Event *e)
+void StateTest::event(SDL_Event *e)
 {
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::event()" << Logger::MessageStream::endl;
+}
+
+std::string StateTest::getname()
+{
+    return "state_test";
 }
 
 StateTest *StateTest::instance()

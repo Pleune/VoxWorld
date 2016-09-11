@@ -167,5 +167,4 @@ std::unique_ptr<Logger::MessageStream> operator<<(std::unique_ptr<Logger::Messag
 
 void Logger::MessageStream::endl(std::unique_ptr<MessageStream>&)
 {
-
 }

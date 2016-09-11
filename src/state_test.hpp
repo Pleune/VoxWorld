@@ -6,13 +6,15 @@
 
 class StateTest : public GameState {
 public:
-	Status init(GameEngine *engine);
-	void cleanup(GameEngine *engine);
-	Status resume(GameEngine *engine);
-	Status pause(GameEngine *engine);
+	Status init();
+	void cleanup();
+	Status resume();
+	Status pause();
 
-	void run(GameEngine *engine);
-	void event(GameEngine *engine, SDL_Event *e);
+	void run(GameEngine *);
+	void event(SDL_Event *e);
+
+    std::string getname();
 
 	static StateTest *instance();
 

@@ -2,12 +2,15 @@
 
 #include <SDL.h>
 #include <iostream>
+#include "logger.hpp"
 
 GameEngine::GameEngine(GameState *inital_state)
 {
+    Logger::stdout.log(Logger::DEBUG) << "GameEngine::GameEngine(): pushing state \"" << inital_state->getname() << "\" onto stack" << Logger::MessageStream::endl;
+
     state_stack.push_back(inital_state);
     current_state = inital_state;
-    inital_state->init(this);
+    inital_state->init();
 	inital_state->instances_inc();
 }
 
@@ -30,9 +33,11 @@ void GameEngine::queue_change(GameState *state)
 
 void GameEngine::push(GameState *state)
 {
+    Logger::stdout.log(Logger::DEBUG) << "GameEngine::push(): pushing state " << state->getname() << " onto stack" << Logger::MessageStream::endl;
+
 	GameState::Status ret;
 
-    ret = current_state->pause(this);
+    ret = current_state->pause();
 
 	if(ret != GameState::Status::OK)
 		return;
@@ -42,9 +47,9 @@ void GameEngine::push(GameState *state)
 
     if(state->instances() > 0)
 	{
-        ret = state->resume(this);
+        ret = state->resume();
     } else {
-        ret = state->init(this);
+        ret = state->init();
 	}
 
 	while(ret != GameState::Status::OK)
@@ -55,10 +60,10 @@ void GameEngine::push(GameState *state)
 			return;
 		}
 
-		//TODO: log this!
+        Logger::stdout.log(Logger::DEBUG) << "GameEngine::push(): resume/init failed! poping failed state "<< current_state->getname() << Logger::MessageStream::endl;
 		state_stack.pop_back();
 		current_state = state_stack.back();
-		current_state->resume(this);
+		current_state->resume();
 	}
 
 	state->instances_inc();
@@ -66,10 +71,12 @@ void GameEngine::push(GameState *state)
 
 void GameEngine::pop()
 {
+    Logger::stdout.log(Logger::DEBUG) << "GameEngine::pop(): poping state " << current_state->getname() << " off stack" << Logger::MessageStream::endl;
+
     if(current_state->instances() > 1)
-        current_state->pause(this);
+        current_state->pause();
     else
-        current_state->cleanup(this);
+        current_state->cleanup();
     current_state->instances_dec();
 
     state_stack.pop_back();
@@ -86,9 +93,9 @@ void GameEngine::change(GameState *state)
 
     if(current_state->instances() > 1)
 	{
-        ret = current_state->pause(this);
+        ret = current_state->pause();
     } else {
-        current_state->cleanup(this);
+        current_state->cleanup();
 	}
 
 	if(ret != GameState::Status::OK)
@@ -102,9 +109,9 @@ void GameEngine::change(GameState *state)
 
     if(state->instances() > 0)
 	{
-        ret = state->resume(this);
+        ret = state->resume();
     } else {
-        ret = state->init(this);
+        ret = state->init();
 	}
 
 	while(ret != GameState::Status::OK)
@@ -118,7 +125,7 @@ void GameEngine::change(GameState *state)
 		//TODO: log this!
 		state_stack.pop_back();
 		current_state = state_stack.back();
-		current_state->resume(this);
+		current_state->resume();
 	}
 
 	state->instances_inc();
@@ -153,6 +160,8 @@ void GameEngine::loop()
 {
 	while(!done)
 		run_once();
+
+    cleanup();
 }
 
 int GameEngine::flush_events(GameState *state)
@@ -167,10 +176,33 @@ int GameEngine::flush_events(GameState *state)
 		if(e.type == SDL_QUIT)
 			done = true;
 
-		state->event(this, &e);
+        if(e.type == SDL_WINDOWEVENT)
+            if(e.window.event == SDL_WINDOWEVENT_RESIZED)
+                window.resize_context();
+
+		state->event(&e);
 
 		i++;
 	}
 
 	return i;
+}
+
+void GameEngine::cleanup()
+{
+    while(!state_stack.empty())
+        pop();
+}
+
+void GameEngine::reset(GameState *state)
+{
+    cleanup();
+
+    Logger::stdout.log(Logger::DEBUG) << "GameEngine::reset() pushing state \"" << current_state->getname() << "\" onto stack" << Logger::MessageStream::endl;
+
+    state_stack.push_back(state);
+    current_state = state;
+    current_state->init();
+    current_state->instances_inc();
+    done = false;
 }

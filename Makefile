@@ -24,16 +24,21 @@ LIBDIR=$(ROOT)lib/
 BUILDDIR=$(ROOT)build/
 OUTPUTDIR=$(ROOT)bin/
 
-SRC:=$(wildcard $(SRCDIR)*.cpp)
+SRC_CPP:=$(wildcard $(SRCDIR)*.cpp)
+SRC:=$(wildcard $(SRCDIR)*.c)
 
-_OBJS=$(patsubst $(SRCDIR)%.cpp,%.o,$(SRC))
+_OBJS=$(patsubst $(SRCDIR)%.c,%.o,$(SRC))
 OBJS=$(patsubst %,$(BUILDDIR)%,$(_OBJS))
+
+_OBJS_CPP=$(patsubst $(SRCDIR)%.cpp,%.o,$(SRC_CPP))
+OBJS_CPP=$(patsubst %,$(BUILDDIR)%,$(_OBJS_CPP))
 
 NAME=blocks
 
 all:	$(OUTPUTDIR)$(NAME)
 
 -include $(OBJS:.o=.d)
+-include $(OBJS_CPP:.o=.d)
 
 $(BUILDDIR)%.d:	$(SRCDIR)%.cpp
 	$(CXX) $(CFLAGS) -M $< |  sed 's,$*\.o[ :]*,\$(BUILDDIR)$*\.o : ,g' > $@
@@ -41,8 +46,11 @@ $(BUILDDIR)%.d:	$(SRCDIR)%.cpp
 $(BUILDDIR)%.o:	$(SRCDIR)%.cpp
 	$(CXX) $(CFLAGS) -c $< -o $@
 
-$(OUTPUTDIR)$(NAME): $(OBJS)
-	$(CXX) $(LFLAGS) -o $(OUTPUTDIR)$(NAME) $(OBJS) $(LIBS)
+$(BUILDDIR)%.o:	$(SRCDIR)%.c
+	$(CXX) $(CFLAGS) -c $< -o $@
+
+$(OUTPUTDIR)$(NAME): $(OBJS_CPP) $(OBJS)
+	$(CXX) $(LFLAGS) -o $(OUTPUTDIR)$(NAME) $(OBJS_CPP) $(OBJS) $(LIBS)
 
 check-syntax:
 	$(CXX) -s -o /dev/null -S $(CHK_SOURCES)
@@ -53,4 +61,3 @@ run:	$(OUTPUTDIR)$(NAME)
 .PHONY: clean
 clean:
 	rm -rf $(BUILDDIR)* $(OUTPUTDIR)blocks
-

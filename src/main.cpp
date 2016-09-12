@@ -3,7 +3,6 @@
 #include "logger.hpp"
 #include "gameengine.hpp"
 #include "state_initalize.hpp"
-#include "textbox.hpp"
 
 int
 main()

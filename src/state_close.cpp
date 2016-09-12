@@ -1,7 +1,6 @@
 #include "state_close.hpp"
 
 #include "logger.hpp"
-#include "textbox.hpp"
 
 StateClose *StateClose::instance_ = NULL;
 StateClose::StateClose()

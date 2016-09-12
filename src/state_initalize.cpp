@@ -1,7 +1,6 @@
 #include "state_initalize.hpp"
 
 #include "logger.hpp"
-#include "textbox.hpp"
 #include "state_test.hpp"
 
 StateInitalize *StateInitalize::instance_ = NULL;

@@ -4,6 +4,8 @@
 #include "gamestate.hpp"
 #include "gameengine.hpp"
 
+class Textbox;
+
 class StateTest : public GameState {
 public:
 	Status init();
@@ -20,6 +22,13 @@ public:
 
 private:
 	StateTest();
+
+    struct {
+        bool exit = false;
+    } queue;
+
+    Textbox *text;
+
 	static StateTest *instance_;
 };
 

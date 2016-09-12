@@ -1,10 +1,16 @@
-#include "gamewindow.hpp"
+#include "state_window.hpp"
 
 #include <SDL.h>
 #include <GL/glew.h>
 #include "logger.hpp"
+#include "state_initalize.hpp"
 
-GameWindow::GameWindow()
+StateWindow *StateWindow::instance_ = NULL;
+StateWindow::StateWindow()
+{
+}
+
+GameState::Status StateWindow::init()
 {
 	Logger::stdout.log(Logger::DEBUG) << "GameWindow::GameWindow() creating window w/ gl context" << Logger::MessageStream::endl;
 
@@ -33,19 +39,70 @@ GameWindow::GameWindow()
     glCullFace(GL_BACK);
     glClear(GL_COLOR_BUFFER_BIT);
     SDL_GL_SwapWindow(win);
+
+	return OK;
 }
 
-GameWindow::~GameWindow()
+void StateWindow::cleanup()
 {
 	Logger::stdout.log(Logger::DEBUG) << "GameWindow::cleanup() destroying window" << Logger::MessageStream::endl;
 
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(win);
     SDL_Quit();
+    win = NULL;
 }
 
-void GameWindow::resize_context()
+GameState::Status StateWindow::resume()
+{
+	return OK;
+}
+
+GameState::Status StateWindow::pause()
+{
+	return OK;
+}
+
+void StateWindow::run(GameEngine *engine)
+{
+    //TODO: set engine event hook for window resize
+    engine->queue_push(StateInitalize::instance());
+}
+
+void StateWindow::event(SDL_Event *e)
+{
+    if(e->type == SDL_WINDOWEVENT)
+    {
+        if(e->window.event == SDL_WINDOWEVENT_RESIZED)
+            update_size();
+    }
+}
+
+std::string StateWindow::getname()
+{
+    return "window";
+}
+
+StateWindow *StateWindow::instance()
+{
+	if(instance_ == NULL)
+		instance_ = new StateWindow();
+	return instance_;
+}
+
+void StateWindow::update_size()
 {
     SDL_GetWindowSize(win, &windoww, &windowh);
     glViewport(0,0, windoww, windowh);
+}
+
+void StateWindow::swap()
+{
+    SDL_GL_SwapWindow(win);
+}
+
+void StateWindow::get_dimensions(int *windoww_, int *windowh_)
+{
+    *windoww_ = windoww;
+    *windowh_ = windowh;
 }

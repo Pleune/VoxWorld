@@ -1,6 +1,8 @@
 #include "state_initalize.hpp"
 
+#include <SDL_ttf.h>
 #include "logger.hpp"
+#include "textbox.hpp"
 #include "state_test.hpp"
 
 StateInitalize *StateInitalize::instance_ = NULL;
@@ -15,6 +17,9 @@ GameState::Status StateInitalize::init()
 
 void StateInitalize::cleanup()
 {
+    Textbox::cleanup();
+    Logger::stdout.log(Logger::DEBUG) << "Textbox de-initaized" << Logger::MessageStream::endl;
+    TTF_Quit();
 }
 
 GameState::Status StateInitalize::resume()
@@ -29,7 +34,10 @@ GameState::Status StateInitalize::pause()
 
 void StateInitalize::run(GameEngine *engine)
 {
-    engine->queue_change(StateTest::instance());
+    TTF_Init();
+    Textbox::init();
+    Logger::stdout.log(Logger::DEBUG) << "Textbox initaized" << Logger::MessageStream::endl;
+    engine->queue_push(StateTest::instance());
 }
 
 void StateInitalize::event(SDL_Event *e)

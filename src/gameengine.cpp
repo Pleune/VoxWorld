@@ -177,12 +177,6 @@ int GameEngine::flush_events(GameState *state)
 		if(e.type == SDL_QUIT)
 			done = true;
 
-        if(e.type == SDL_WINDOWEVENT)
-        {
-            if(e.window.event == SDL_WINDOWEVENT_RESIZED)
-                window.resize_context();
-        }
-
 		state->event(&e);
 
 		i++;

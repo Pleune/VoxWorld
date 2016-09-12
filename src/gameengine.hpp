@@ -2,7 +2,6 @@
 #define BLOCKS_GAMEENGINE_H
 
 #include <vector>
-#include "gamewindow.hpp"
 #include "gamestate.hpp"
 
 class GameEngine {
@@ -21,6 +20,7 @@ public:
 
     void cleanup();
     void reset(GameState *state);
+    void finish() {done=true;}
 
 private:
 	void push(GameState *state);
@@ -28,8 +28,6 @@ private:
 	void change(GameState *state);
 
 	int flush_events(GameState *state);
-
-    GameWindow window;
 
 	/*
 	 * Instead of directly allowing push/pop/change from

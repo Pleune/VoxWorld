@@ -89,6 +89,7 @@ void GameEngine::pop()
 
 void GameEngine::change(GameState *state)
 {
+    Logger::stdout.log(Logger::DEBUG) << "GameEngine::change(): changing from state " << current_state->getname() << " to state " << state->getname() <<  Logger::MessageStream::endl;
 	GameState::Status ret = GameState::Status::OK;
 
     if(current_state->instances() > 1)
@@ -177,8 +178,10 @@ int GameEngine::flush_events(GameState *state)
 			done = true;
 
         if(e.type == SDL_WINDOWEVENT)
+        {
             if(e.window.event == SDL_WINDOWEVENT_RESIZED)
                 window.resize_context();
+        }
 
 		state->event(&e);
 

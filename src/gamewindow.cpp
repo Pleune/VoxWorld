@@ -6,7 +6,7 @@
 
 GameWindow::GameWindow()
 {
-	Logger::stdout.log(Logger::DEBUG) << "GameWindow::GameWindow()" << Logger::MessageStream::endl;
+	Logger::stdout.log(Logger::DEBUG) << "GameWindow::GameWindow() creating window w/ gl context" << Logger::MessageStream::endl;
 
 	if(SDL_Init(SDL_INIT_EVERYTHING))
         Logger::stdout.log(Logger::ERROR) << "GameWindow::GameWindow(): SDL_Init failed: (" << SDL_GetError() << ')' << Logger::MessageStream::endl;
@@ -37,7 +37,7 @@ GameWindow::GameWindow()
 
 GameWindow::~GameWindow()
 {
-	Logger::stdout.log(Logger::DEBUG) << "GameWindow::cleanup()" << Logger::MessageStream::endl;
+	Logger::stdout.log(Logger::DEBUG) << "GameWindow::cleanup() destroying window" << Logger::MessageStream::endl;
 
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(win);

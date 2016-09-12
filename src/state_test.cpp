@@ -2,6 +2,7 @@
 
 #include <SDL.h>
 #include "logger.hpp"
+#include "state_close.hpp"
 
 StateTest *StateTest::instance_ = NULL;
 StateTest::StateTest()
@@ -37,7 +38,7 @@ void StateTest::run(GameEngine *engine)
 	static int i = 0;
 	i++;
 	if(i > 10)
-        engine->queue_pop();
+        engine->queue_change(StateClose::instance());
 
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::run()" << Logger::MessageStream::endl;
 
@@ -51,7 +52,7 @@ void StateTest::event(SDL_Event *e)
 
 std::string StateTest::getname()
 {
-    return "state_test";
+    return "test";
 }
 
 StateTest *StateTest::instance()

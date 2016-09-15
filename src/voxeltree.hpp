@@ -11,6 +11,7 @@ public:
     static_assert(DS > 1, "VoxelTree: division_size must be greater than 1!");
 
     VoxelTree(int levels, T &inital)
+        :levels_(levels)
     {
         size_ = std::pow(DS, levels);
         root_ = new Node(LEAF);
@@ -51,10 +52,14 @@ public:
         Node *node = root_;
         int size = size_;
 
+        unsigned int stack_ptr = 0;
+        Node *simplify_stack[levels_];
+
         while(size != 0)
         {
             if(node->type() == BRANCH)
             {
+                simplify_stack[stack_ptr++] = node;
                 size /= DS;
                 int x_ = x/size;
                 int y_ = y/size;
@@ -68,13 +73,28 @@ public:
                 if(size == 1)
                 {
                     node->leaf_set(data);
-                    return;
+                    break;
                 } else {
                     node->leaf_transform_branch();
                 }
             }
         }
-        assert(false);
+
+        //simplify_stack[stack_ptr++] = node;
+
+        while(stack_ptr != 0)
+        {
+            node = simplify_stack[--stack_ptr];
+            if(node->type() == BRANCH)
+            {
+                node->try_simplify();
+            }
+        }
+    }
+
+    int count_nodes()
+    {
+        return count_nodes(root_);
     }
 
 private:
@@ -115,6 +135,42 @@ private:
                 data_.branch.children[i] = tmp;
         }
 
+        void try_simplify()
+        {
+            bool simplify = true;
+            bool compare_ready = false;
+            T comparison = 0;
+            for(int i=0; i<DS*DS*DS; i++)
+            {
+                Node *child = branch_child(i);
+                if(child->type() == LEAF)
+                {
+                    if(compare_ready)
+                    {
+                        if(branch_child(i)->leaf_get() != comparison)
+                        {
+                            simplify = false;
+                            break;
+                        } else {
+                        }
+                    } else {
+                        comparison = child->leaf_get();
+                        compare_ready = true;
+                    }
+                } else {
+                    simplify = false;
+                    break;
+                }
+            }
+
+            if(simplify)
+            {
+                delete[] data_.branch.children;
+                type_ = LEAF;
+                data_.leaf.data = comparison;
+            }
+        }
+
         Node *branch_child(int x, int y, int z)
         {
             assert(x >= 0 && x < DS);
@@ -122,6 +178,13 @@ private:
             assert(z >= 0 && z < DS);
 
             return &data_.branch.children[x + DS*y + DS*DS*z];
+        }
+
+        Node *branch_child(int index)
+        {
+            assert(index >= 0 && index < DS*DS*DS);
+
+            return &data_.branch.children[index];
         }
 
     private:
@@ -155,7 +218,22 @@ private:
         NodeType type_ : 1;
     };
 
+    int count_nodes(Node *node)
+    {
+        if(node->type() == LEAF)
+        {
+            return 1;
+        } else {
+            assert(node->type() == BRANCH);
+            int sum = 1;
+            for(int i=0; i<DS*DS*DS; i++)
+                sum += count_nodes(node->branch_child(i));
+            return sum;
+        }
+    }
+
     int size_;
+    int levels_;
     Node *root_;
 };
 

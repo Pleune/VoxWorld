@@ -13,7 +13,8 @@ public:
     VoxelTree(int levels, T &inital)
     {
         size_ = std::pow(DS, levels);
-        root_ = new LeafNode(inital);
+        root_ = new Node(LEAF);
+        root_->leaf_set(inital);
     }
     ~VoxelTree()
     {
@@ -29,19 +30,17 @@ public:
         {
             if(node->type() == BRANCH)
             {
-                BranchNode *bnode = reinterpret_cast<BranchNode *>(node);
                 size /= DS;
                 int x_ = x/size;
                 int y_ = y/size;
                 int z_ = z/size;
-                node = *bnode->child(x_, y_, z_);
+                node = node->branch_child(x_, y_, z_);
                 x -= size * x_;
                 y -= size * y_;
                 z -= size * z_;
             } else {
                 assert(node->type() == LEAF);
-                LeafNode *lnode = reinterpret_cast<LeafNode *>(node);
-                return lnode->get();
+                return node->leaf_get();
             }
         }
         assert(false);
@@ -49,32 +48,29 @@ public:
 
     void set(int x, int y, int z, T &data)
     {
-        Node **node = &root_;
+        Node *node = root_;
         int size = size_;
 
         while(size != 0)
         {
-            if((*node)->type() == BRANCH)
+            if(node->type() == BRANCH)
             {
-                BranchNode *bnode = reinterpret_cast<BranchNode *>(*node);
                 size /= DS;
                 int x_ = x/size;
                 int y_ = y/size;
                 int z_ = z/size;
-                node = bnode->child(x_, y_, z_);
+                node = node->branch_child(x_, y_, z_);
                 x -= size * x_;
                 y -= size * y_;
                 z -= size * z_;
             } else {
-                assert((*node)->type() == LEAF);
-                LeafNode *lnode = reinterpret_cast<LeafNode *>(*node);
+                assert(node->type() == LEAF);
                 if(size == 1)
                 {
-                    lnode->set(data);
+                    node->leaf_set(data);
                     return;
                 } else {
-                    *node = new BranchNode(lnode->get());
-                    delete lnode;
+                    node->leaf_transform_branch();
                 }
             }
         }
@@ -86,54 +82,77 @@ private:
 
     class Node {
     public:
-        virtual ~Node() {}
+        Node(NodeType type)
+            :type_(type)
+        {
+            if(type == BRANCH)    init_branch();
+            else if(type == LEAF) init_leaf();
+            else assert(false);
+        }
+
+        Node() :Node(LEAF){}
+
+        ~Node()
+        {
+            if(type_ == BRANCH)    cleanup_branch();
+            else if(type_ == LEAF) cleanup_leaf();
+            else assert(false);
+        }
+
         NodeType type() {return type_;}
-    protected:
-        Node(NodeType type) :type_(type) {};
-        NodeType type_ : 1;
-    };
 
-    class LeafNode : public Node {
-    public:
-        LeafNode(T &data)
-            :Node(LEAF),
-             data_(data)
-        {
-        }
-        void set(T &data) {data_ = data;}
-        T &get() {return data_;}
-    private:
-        T data_;
-    };
+        void leaf_set(T &data) {assert(type_ == LEAF); data_.leaf.data = data;}
+        T &leaf_get() {assert(type_ == LEAF); return data_.leaf.data;}
 
-    class BranchNode : public Node {
-    public:
-        BranchNode(T &data)
-            :Node(BRANCH)
+        void leaf_transform_branch()
         {
-            for(int x=0; x<DS; x++)
-            for(int y=0; y<DS; y++)
-            for(int z=0; z<DS; z++)
-                children[x][y][z] = new LeafNode(data);
-        }
-        ~BranchNode()
-        {
-            for(int x=0; x<DS; x++)
-            for(int y=0; y<DS; y++)
-            for(int z=0; z<DS; z++)
-                delete children[x][y][z];
+            assert(type_ == LEAF);
+            Node tmp = Node(LEAF);
+            tmp.leaf_set(data_.leaf.data);
+            type_ = BRANCH;
+            init_branch();
+            for(int i=0; i<DS*DS*DS; i++)
+                data_.branch.children[i] = tmp;
         }
 
-        Node **child(int x, int y, int z)
+        Node *branch_child(int x, int y, int z)
         {
             assert(x >= 0 && x < DS);
             assert(y >= 0 && y < DS);
             assert(z >= 0 && z < DS);
-            return &children[x][y][z];
+
+            return &data_.branch.children[x + DS*y + DS*DS*z];
         }
 
     private:
-        Node *children[DS][DS][DS];
+        void init_branch()
+        {
+            data_.branch.children = new Node[DS*DS*DS]();
+        }
+
+        void init_leaf()
+        {
+        }
+
+        void cleanup_branch()
+        {
+            delete[] data_.branch.children;
+        }
+
+        void cleanup_leaf()
+        {
+        }
+
+        union {
+            struct {
+                T data;
+            } leaf;
+            struct {
+                Node *children;
+            } branch;
+        } data_;
+
+        NodeType type_ : 1;
     };
 
     int size_;

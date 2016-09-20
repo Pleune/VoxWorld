@@ -80,6 +80,8 @@ GLuint Textbox::attribute_pos = 0;
 GLuint Textbox::attribute_texcoord_vert = 0;
 GLuint Textbox::vertices_buf = 0;
 
+char *Textbox::base_path = 0;
+
 const char *Textbox::shader_vertex = "\
 #version 100\n\
 precision mediump float;\n\
@@ -118,6 +120,8 @@ Textbox::Status Textbox::init()
     attribute_texcoord_vert = glGetAttribLocation(glprogram, "texcoord_vert");
     glGenBuffers(1, &vertices_buf);
 
+    base_path = SDL_GetBasePath();
+
     return OK;
 }
 
@@ -125,6 +129,7 @@ void Textbox::cleanup()
 {
     glDeleteProgram(glprogram);
     glDeleteBuffers(1, &vertices_buf);
+    free(base_path);
 }
 
 Textbox::Textbox(int x, int y, int w, int h, Font font, Size size, SDL_Color &color, const std::string &text, Flags flags)
@@ -147,7 +152,7 @@ Textbox::~Textbox()
 void Textbox::redraw()
 {
     char *file = (char *)calloc(1024, sizeof(char));
-    strncat(file, SDL_GetBasePath(), 1024);
+    strncat(file, base_path, 1024);
     strncat(file, ttf_info[font].path, 1024 - strlen(file));
 
     TTF_Font *font_sdl = TTF_OpenFont(file, size_lookup[size]);

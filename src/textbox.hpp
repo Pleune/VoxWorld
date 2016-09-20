@@ -85,6 +85,8 @@ private:
     static GLuint attribute_texcoord_vert;
     static GLuint vertices_buf;
 
+    static char *base_path;
+
     const static char *shader_vertex;
     const static char *shader_fragment;
 };

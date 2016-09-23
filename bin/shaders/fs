@@ -1,0 +1,26 @@
+#version 300 es
+
+precision mediump float;
+
+in vec3 colors;
+in vec3 vp;
+
+out vec4 color;
+
+void main(){
+	vec3 offset;
+
+	offset = abs(vp - floor(vp));
+
+	offset.x = min(offset.x, 1.0 - offset.x);
+	offset.y = min(offset.y, 1.0 - offset.y);
+	offset.z = min(offset.z, 1.0 - offset.z);
+
+	offset.x = sqrt(sqrt(offset.x));
+	offset.y = sqrt(sqrt(offset.y));
+	offset.z = sqrt(sqrt(offset.z));
+
+	float o = min( min(max(offset.x, offset.y), max(offset.y, offset.z)), max(offset.z, offset.x));
+
+	color = vec4(colors, 1.0f);// * vec3(min(o + 0.5, 1.0));
+}

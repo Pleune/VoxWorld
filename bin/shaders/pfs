@@ -1,0 +1,56 @@
+#version 300 es
+
+precision mediump float;
+
+in vec2 Texcoord;
+out vec4 color;
+
+uniform sampler2D tex;
+uniform sampler2D depth;
+uniform vec2 window_size;
+
+void main()
+{
+	// X directional search matrix.
+	mat3 GX = mat3( -1.0, 0.0, 1.0,
+		-2.0, 0.0, 2.0,
+		-1.0, 0.0, 1.0 );
+	// Y directional search matrix.
+	mat3 GY =  mat3( 1.0,  2.0,  1.0,
+		0.0,  0.0,  0.0,
+		-1.0, -2.0, -1.0 );
+
+	float  fSumX = 0.0;
+	float  fSumY =  0.0;
+
+	for(float I=-1.0; I<=1.0; I = I + 1.0)
+	{
+		for(float J=-1.0; J<=1.0; J = J + 1.0)
+		{
+			vec2 fTemp = vec2(Texcoord) + vec2(I/window_size.x,J/window_size.y);
+			float fTempSum = texture2D( depth, fTemp).b;
+			fSumX = fSumX + ( fTempSum * GX[int(I+1.0)][int(J+1.0)]);
+			fSumY = fSumY + ( fTempSum * GY[int(I+1.0)][int(J+1.0)]);
+		}
+	}
+
+	fSumX = abs( fSumX );
+	fSumY = abs( fSumY );
+
+	if(fSumX < 1.0)
+		fSumX = sqrt(fSumX);
+	else
+		fSumX = 1.0;
+
+	if(fSumY < 1.0)
+		fSumY = sqrt(fSumY);
+	else
+		fSumY = 1.0;
+
+	float fTotalSum = sqrt((fSumX + fSumY) * 9.0);
+
+	color = vec4(texture2D(tex, Texcoord).rgb * vec3(1.0 - fTotalSum), 1.0f);
+
+	if(Texcoord.x < 0.501 && Texcoord.x > 0.499 && Texcoord.y < 0.501 && Texcoord.y > 0.499)
+		color = vec4(1.0);
+}

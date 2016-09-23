@@ -4,6 +4,7 @@
 #include "logger.hpp"
 #include "textbox.hpp"
 #include "state_test.hpp"
+#include "chunk.hpp"
 
 StateInitalize *StateInitalize::instance_ = NULL;
 StateInitalize::StateInitalize()
@@ -12,6 +13,11 @@ StateInitalize::StateInitalize()
 
 GameState::Status StateInitalize::init()
 {
+    TTF_Init();
+    Textbox::init();
+    Logger::stdout.log(Logger::DEBUG) << "Textbox initaized" << Logger::MessageStream::endl;
+    Chunk::init();
+    Logger::stdout.log(Logger::DEBUG) << "Chunk initaized" << Logger::MessageStream::endl;
 	return OK;
 }
 
@@ -34,9 +40,6 @@ GameState::Status StateInitalize::pause()
 
 void StateInitalize::run(GameEngine *engine)
 {
-    TTF_Init();
-    Textbox::init();
-    Logger::stdout.log(Logger::DEBUG) << "Textbox initaized" << Logger::MessageStream::endl;
     engine->queue_push(StateTest::instance());
 }
 

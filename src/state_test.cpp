@@ -17,6 +17,7 @@ GameState::Status StateTest::init()
 
     SDL_Color color = {0,255,0,0};
     text = new Textbox(10, 10, 400, 30, Textbox::ROBOTO_REGULAR, Textbox::MEDIUM, color, "Press ESC to quit.", Textbox::NONE);
+    world = new World();
 
 	return OK;
 }
@@ -25,6 +26,7 @@ void StateTest::cleanup()
 {
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::cleanup()" << Logger::MessageStream::endl;
     delete text;
+    delete world;
 }
 
 GameState::Status StateTest::resume()
@@ -44,30 +46,11 @@ void StateTest::run(GameEngine *engine)
     if(queue.exit)
         engine->finish();
 
-    static int r=0;
-    static int g=0;
-    static int b=0;
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    static int r_sign = 1;
-    static int g_sign = 1;
-    static int b_sign = 1;
-
-    r += r_sign*2;
-    g += g_sign*3;
-    b += b_sign*5;
-
-    if(r > 255) { r=255; r_sign = -1; }
-    if(g > 255) { g=255; g_sign = -1; }
-    if(b > 255) { b=255; b_sign = -1; }
-
-    if(r < 0) { r=0; r_sign = 1; }
-    if(g < 0) { g=0; g_sign = 1; }
-    if(b < 0) { b=0; b_sign = 1; }
-
-    SDL_Color c = {(Uint8)r, (Uint8)g, (Uint8)b, 0};
-
-    text->set_color(c);
+    world->render();
     text->render();
+
     StateWindow::instance()->swap();
 
     SDL_Delay(25);

@@ -3,6 +3,7 @@
 
 #include "gamestate.hpp"
 #include "gameengine.hpp"
+#include "world.hpp"
 
 class Textbox;
 
@@ -28,8 +29,10 @@ private:
     } queue;
 
     Textbox *text;
+    World *world;
 
 	static StateTest *instance_;
+
 };
 
 #endif

@@ -10,7 +10,7 @@ class VoxelTree {
 public:
     static_assert(DS > 1, "VoxelTree: division_size must be greater than 1!");
 
-    VoxelTree(int levels, T &inital)
+    VoxelTree(int levels, T inital)
         :levels_(levels)
     {
         size_ = std::pow(DS, levels);

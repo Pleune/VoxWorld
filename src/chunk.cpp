@@ -276,6 +276,38 @@ void Chunk::set(int x, int y, int z, Block::ID id)
     data.set(x, y, z, id);
 }
 
+void Chunk::lock(LockType type)
+{
+    if(type == WRITE)
+    {
+        lock_m.lock();
+        lock_type = WRITE;
+    } else {
+        if(lock_type == WRITE)
+        {
+            lock_m.lock();
+            lock_type = READ;
+            lock_num = 1;
+        } else {
+            if(lock_num == 0)
+                lock_m.lock();
+            lock_num++;
+        }
+    }
+}
+
+void Chunk::unlock()
+{
+    if(lock_type == WRITE)
+    {
+        lock_m.unlock();
+    } else {
+        lock_num--;
+        if(lock_num == 0)
+            lock_m.unlock();
+    }
+}
+
 Chunk::Status Chunk::init()
 {
     glGenBuffers(2, static_index_elements);

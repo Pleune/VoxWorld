@@ -5,10 +5,12 @@
 #include "voxeltree.hpp"
 #include "block.hpp"
 #include <GL/glew.h>
+#include <mutex>
 
 class Chunk {
 public:
     enum Status {OK, FAIL};
+    enum LockType {READ, WRITE};
 
     Chunk(long x, long y, long z);
 
@@ -20,6 +22,9 @@ public:
     Block::ID get(int x, int y, int z);
     void set(int x, int y, int z, Block::ID id);
 
+    void lock(LockType);
+    void unlock();
+
     static Status init();
     static void cleanup();
 
@@ -29,6 +34,10 @@ private:
         long y;
         long z;
     } pos;
+
+    LockType lock_type;
+    std::mutex lock_m;
+    int lock_num;
 
     GLBufferRaw mesh;
     VoxelTree<Block::ID, 2> data;

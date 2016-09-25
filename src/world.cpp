@@ -6,6 +6,7 @@
 #include "gl.h"
 #include "state_window.hpp"
 #include "logger.hpp"
+#include "chunkgen.hpp"
 
 World::World()
 {
@@ -84,13 +85,7 @@ World::World()
         Logger::stdout.log(Logger::FATAL) << "Bad world post-process framebuffer" << Logger::MessageStream::endl;
 
     chunk = new Chunk(0,0,0);
-    for(int i=0; i<100; i++)
-    {
-        int x = rand()%16;
-        int y = rand()%16;
-        int z = rand()%16;
-        chunk->set(x,y,z, Block::GRASS);
-    }
+    ChunkGen::random(chunk);
     chunk->remesh();
 
     GLenum glerr = glGetError();

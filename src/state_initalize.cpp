@@ -1,5 +1,7 @@
 #include "state_initalize.hpp"
 
+#include <cstdlib>
+#include <ctime>
 #include <SDL_ttf.h>
 #include "logger.hpp"
 #include "textbox.hpp"
@@ -13,16 +15,19 @@ StateInitalize::StateInitalize()
 
 GameState::Status StateInitalize::init()
 {
+    std::srand(std::time(0));
+    Logger::stdout.log(Logger::DEBUG) << "rand() seeded from time" << Logger::MessageStream::endl;
     TTF_Init();
+    Logger::stdout.log(Logger::DEBUG) << "SDL_ttf initalized" << Logger::MessageStream::endl;
     Textbox::init();
     Logger::stdout.log(Logger::DEBUG) << "Textbox initaized" << Logger::MessageStream::endl;
-    Chunk::init();
-    Logger::stdout.log(Logger::DEBUG) << "Chunk initaized" << Logger::MessageStream::endl;
 	return OK;
 }
 
 void StateInitalize::cleanup()
 {
+    TTF_Quit();
+    Logger::stdout.log(Logger::DEBUG) << "SDL_ttf de-initaized" << Logger::MessageStream::endl;
     Textbox::cleanup();
     Logger::stdout.log(Logger::DEBUG) << "Textbox de-initaized" << Logger::MessageStream::endl;
     TTF_Quit();

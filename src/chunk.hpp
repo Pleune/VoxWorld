@@ -6,6 +6,7 @@
 #include "block.hpp"
 #include <GL/glew.h>
 #include <mutex>
+#include "custommath.h"
 
 class Chunk {
 public:
@@ -22,18 +23,18 @@ public:
     Block::ID get(int x, int y, int z);
     void set(int x, int y, int z, Block::ID id);
 
+    long3_t cpos() {return pos;}
+
     void lock(LockType);
     void unlock();
 
     static Status init();
     static void cleanup();
 
+    static int size() {return side_len;}
+
 private:
-    struct {
-        long x;
-        long y;
-        long z;
-    } pos;
+    long3_t pos;
 
     LockType lock_type;
     std::mutex lock_m;

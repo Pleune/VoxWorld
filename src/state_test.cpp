@@ -14,7 +14,8 @@ StateTest::StateTest()
 
 GameState::Status StateTest::init()
 {
-	Logger::stdout.log(Logger::DEBUG) << "StateTest::init()" << Logger::MessageStream::endl;
+    Chunk::init();
+    Logger::stdout.log(Logger::DEBUG) << "Chunk initaized" << Logger::MessageStream::endl;
 
     SDL_Color color = {0,255,0,0};
     text = new Textbox(10, 10, 400, 30, Textbox::ROBOTO_REGULAR, Textbox::MEDIUM, color, "Press ESC to quit.", Textbox::NONE);
@@ -30,6 +31,9 @@ void StateTest::cleanup()
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::cleanup()" << Logger::MessageStream::endl;
     delete text;
     delete world;
+
+    Chunk::cleanup();
+    Logger::stdout.log(Logger::DEBUG) << "Chunk de-initaized" << Logger::MessageStream::endl;
 }
 
 GameState::Status StateTest::resume()

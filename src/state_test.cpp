@@ -14,7 +14,7 @@ StateTest::StateTest()
 
 GameState::Status StateTest::init()
 {
-    Chunk::init();
+    World::init();
     Logger::stdout.log(Logger::DEBUG) << "Chunk initaized" << Logger::MessageStream::endl;
 
     SDL_Color color = {0,255,0,0};
@@ -32,7 +32,7 @@ void StateTest::cleanup()
     delete text;
     delete world;
 
-    Chunk::cleanup();
+    World::cleanup();
     Logger::stdout.log(Logger::DEBUG) << "Chunk de-initaized" << Logger::MessageStream::endl;
 }
 

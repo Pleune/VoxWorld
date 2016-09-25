@@ -8,8 +8,43 @@
 #include "logger.hpp"
 #include "chunkgen.hpp"
 
+GLuint World::pre_program;
+GLuint World::pre_uniform_viewprojectionmatrix;
+
+GLuint World::post_program;
+GLuint World::post_uniform_tex;
+GLuint World::post_uniform_depth;
+GLuint World::post_uniform_window_size;
+GLuint World::post_buffer_target;
+
+World::Renderbuff World::renderbuffer;
+
 World::World()
     :chunks(1000, hash_cpos, compare_cpos)
+{
+    for(int x=-10; x<11; x++)
+    for(int z=-10; z<11; z++)
+    {
+        long3_t cpos = {x,0,z};
+        Chunk *chnk = new Chunk(x,0,z);
+        chunks.insert({cpos, chnk});
+        ChunkGen::random(chnk);
+        chnk->remesh();
+    }
+
+    GLenum glerr = glGetError();
+    if(glerr != GL_NO_ERROR)
+        Logger::stdout.log(Logger::FATAL) << "OpenGL error code " << glerr << " after World::World()"
+                                          << Logger::MessageStream::endl;
+}
+
+World::~World()
+{
+    for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
+        delete it->second;
+}
+
+void World::init()
 {
     int windoww, windowh;
     StateWindow::instance()->get_dimensions(&windoww, &windowh);
@@ -20,13 +55,14 @@ World::World()
     gl_program_load_file(&post_program, "shaders/pvs", "shaders/pfs", basepath);
     free(basepath);
 
-    //setup for pre_program
-    pre_uniform_modelmatrix = glGetUniformLocation(pre_program, "MODEL");
+    Chunk::init(pre_program);
+
 	pre_uniform_viewprojectionmatrix = glGetUniformLocation(pre_program, "VP");
 	post_uniform_tex = glGetUniformLocation(post_program, "tex");
 	post_uniform_depth = glGetUniformLocation(post_program, "depth");
 	post_uniform_window_size = glGetUniformLocation(post_program, "window_size");
 
+    //setup for pre_program
     glUseProgram(pre_program);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
@@ -84,32 +120,20 @@ World::World()
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         Logger::stdout.log(Logger::FATAL) << "Bad world post-process framebuffer" << Logger::MessageStream::endl;
-
-    long3_t cpos = {0,0,0};
-    Chunk *chnk = new Chunk(0,0,0);
-    chunks.insert({cpos, chnk});
-    ChunkGen::random(chnk);
-    chnk->remesh();
-
-    GLenum glerr = glGetError();
-    if(glerr != GL_NO_ERROR)
-        Logger::stdout.log(Logger::FATAL) << "OpenGL error code " << glerr << " after World::World()"
-                                          << Logger::MessageStream::endl;
 }
 
-World::~World()
+void World::cleanup()
 {
     glDeleteProgram(pre_program);
     glDeleteProgram(post_program);
 
-    for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
-        delete it->second;
+    Chunk::cleanup();
 }
 
 void World::render()
 {
     static float theta = 0;
-    theta += .025;
+    theta += .01;
 
     int windoww, windowh;
     StateWindow::instance()->get_dimensions(&windoww, &windowh);
@@ -122,24 +146,19 @@ void World::render()
 
     mat4_t projection = getprojectionmatrix(90, (float)windoww / (float)windowh, 3000, .1);
 
-    vec3_t pos = {20*cos(theta) + 8, 20, 20*sin(theta) + 8};
+    vec3_t forward = {cos(theta), 1, sin(theta)};
+    static const vec3_t height = {0, 1.65, 0};
+    vec3_t pos = {-cos(theta)*40, 40, -sin(theta)*40};
     static const vec3_t up = {0, 1, 0};
-    static const vec3_t forward = {8, 8, 8};
 
-    mat4_t view = getviewmatrix(pos, forward, up);
+    mat4_t view = getviewmatrix(height, forward, up);
+
     mat4_t vp;
-
     dotmat4mat4(&vp, &projection, &view);
     glUniformMatrix4fv(pre_uniform_viewprojectionmatrix, 1, GL_FALSE, vp.mat);
 
-    //long3_t chunkpos = chunk_pos_get(data[x][y][z].chunk);
-    //long3_t worldpos = get_worldpos_from_chunkpos(&chunkpos);
-    //mat4_t matrix = gettranslatematrix(worldpos.x - pos.x, worldpos.y - pos.y, worldpos.z - pos.z);
-    mat4_t matrix = gettranslatematrix(0, 0, 0);
-    glUniformMatrix4fv(pre_uniform_modelmatrix, 1, GL_FALSE, matrix.mat);
-
     for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
-        it->second->render();
+        it->second->render(pos);
 
     //render to screen
     glUseProgram(post_program);

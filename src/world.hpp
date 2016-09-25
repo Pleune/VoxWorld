@@ -13,6 +13,9 @@ public:
 
     void update_window_size();
 
+    static void init();
+    static void cleanup();
+
 private:
     static unsigned long hash_cpos(long3_t l)
     {
@@ -33,17 +36,15 @@ private:
 
     ChunkMap chunks;
 
-    GLuint pre_program;
-    GLuint pre_uniform_modelmatrix;
-	GLuint pre_uniform_viewprojectionmatrix;
+    static GLuint pre_program;
+    static GLuint pre_uniform_viewprojectionmatrix;
+    static GLuint post_program;
+	static GLuint post_uniform_tex;
+	static GLuint post_uniform_depth;
+    static GLuint post_uniform_window_size;
+    static GLuint post_buffer_target;
 
-    GLuint post_program;
-	GLuint post_uniform_tex;
-	GLuint post_uniform_depth;
-    GLuint post_uniform_window_size;
-    GLuint post_buffer_target;
-
-    struct {
+    struct Renderbuff {
         GLuint framebuffer;
 
         GLuint colorbuffer;
@@ -51,7 +52,7 @@ private:
 
         GLuint colorbufferid;
         GLuint depthbufferid;
-    } renderbuffer;
+    } static renderbuffer;
 };
 
 #endif

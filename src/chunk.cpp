@@ -9,13 +9,16 @@ GLuint Chunk::static_index_elements[2] = {0,0};
 int Chunk::side_len = 16;
 int Chunk::side_len_p1 = 17;
 
+GLuint Chunk::draw_program;
+GLuint Chunk::draw_uniform_modelmatrix;
+
 Chunk::Chunk(long x, long y, long z)
     :pos({x,y,z}),
      data(4, 0)
 {
 }
 
-void Chunk::render()
+void Chunk::render(vec3_t camera_pos)
 {
     if(num_vertices_ > 0)
     {
@@ -38,6 +41,17 @@ void Chunk::render()
                 0);
 
         mesh.bind(GL_ELEMENT_ARRAY_BUFFER);
+
+
+
+        //long3_t chunkpos = chunk_pos_get(data[x][y][z].chunk);
+        //long3_t worldpos = get_worldpos_from_chunkpos(&chunkpos);
+        vec3_t wpos = {(float)(pos.x*side_len),
+                       (float)(pos.y*side_len),
+                       (float)(pos.z*side_len)};
+        mat4_t matrix = gettranslatematrix(wpos.x - camera_pos.x, wpos.y - camera_pos.y, wpos.z - camera_pos.z);
+        glUniformMatrix4fv(draw_uniform_modelmatrix, 1, GL_FALSE, matrix.mat);
+
         glDrawElements(GL_TRIANGLES, num_vertices_, GL_UNSIGNED_INT, 0);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -308,8 +322,11 @@ void Chunk::unlock()
     }
 }
 
-Chunk::Status Chunk::init()
+Chunk::Status Chunk::init(GLuint draw_program)
 {
+    Chunk::draw_program = draw_program;
+    draw_uniform_modelmatrix = glGetUniformLocation(draw_program, "MODEL");
+
     glGenBuffers(2, static_index_elements);
 
     size_t buffer_len = side_len_p1*side_len_p1*side_len_p1 * 3 * NUM_BLOCK_TYPES;

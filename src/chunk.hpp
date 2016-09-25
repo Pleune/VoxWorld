@@ -15,7 +15,7 @@ public:
 
     Chunk(long x, long y, long z);
 
-    void render();
+    void render(vec3_t camera_pos);
     long num_vertices();
 
     void remesh();
@@ -28,7 +28,7 @@ public:
     void lock(LockType);
     void unlock();
 
-    static Status init();
+    static Status init(GLuint draw_program);
     static void cleanup();
 
     static int size() {return side_len;}
@@ -48,6 +48,9 @@ private:
     static GLuint static_index_elements[2];
     static int side_len;
     static int side_len_p1;
+
+    static GLuint draw_program;
+    static GLuint draw_uniform_modelmatrix;
 };
 
 #endif

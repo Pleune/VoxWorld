@@ -7,6 +7,7 @@
 
 StateTest *StateTest::instance_ = NULL;
 StateTest::StateTest()
+    :fps_limit(60)
 {
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::StateTest()" << Logger::MessageStream::endl;
 }
@@ -18,6 +19,8 @@ GameState::Status StateTest::init()
     SDL_Color color = {0,255,0,0};
     text = new Textbox(10, 10, 400, 30, Textbox::ROBOTO_REGULAR, Textbox::MEDIUM, color, "Press ESC to quit.", Textbox::NONE);
     world = new World();
+
+    fps_limit.mark();
 
 	return OK;
 }
@@ -53,7 +56,7 @@ void StateTest::run(GameEngine *engine)
 
     StateWindow::instance()->swap();
 
-    SDL_Delay(25);
+    fps_limit.delay();
 }
 
 void StateTest::event(SDL_Event *e)
@@ -65,6 +68,15 @@ void StateTest::event(SDL_Event *e)
         case SDLK_ESCAPE:
             queue.exit = true;
             break;
+        }
+    }
+
+    if(e->type == SDL_WINDOWEVENT)
+    {
+        if(e->window.event == SDL_WINDOWEVENT_RESIZED)
+        {
+            StateWindow::instance()->update_size();
+            world->update_window_size();
         }
     }
 }

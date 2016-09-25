@@ -161,3 +161,17 @@ void World::render()
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
+
+void World::update_window_size()
+{
+    int windoww, windowh;
+    StateWindow::instance()->get_dimensions(&windoww, &windowh);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, renderbuffer.framebuffer);
+
+    glBindTexture(GL_TEXTURE_2D, renderbuffer.colorbuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windoww, windowh, 0, GL_RGB, GL_FLOAT, 0);
+
+    glBindTexture(GL_TEXTURE_2D, renderbuffer.depthbuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, windoww, windowh, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+}

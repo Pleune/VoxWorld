@@ -4,6 +4,7 @@
 #include "gamestate.hpp"
 #include "gameengine.hpp"
 #include "world.hpp"
+#include "limiter.hpp"
 
 class Textbox;
 
@@ -30,6 +31,8 @@ private:
 
     Textbox *text;
     World *world;
+
+    Limiter fps_limit;
 
 	static StateTest *instance_;
 

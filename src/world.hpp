@@ -10,6 +10,8 @@ public:
 
     void render();
 
+    void update_window_size();
+
 private:
     Chunk *chunk;
 

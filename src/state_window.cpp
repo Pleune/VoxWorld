@@ -101,8 +101,8 @@ void StateWindow::swap()
     SDL_GL_SwapWindow(win);
 }
 
-void StateWindow::get_dimensions(int *windoww_, int *windowh_)
+void StateWindow::get_dimensions(int *windoww, int *windowh)
 {
-    *windoww_ = windoww;
-    *windowh_ = windowh;
+    *windoww = this->windoww;
+    *windowh = this->windowh;
 }

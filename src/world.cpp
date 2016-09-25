@@ -9,6 +9,7 @@
 #include "chunkgen.hpp"
 
 World::World()
+    :chunks(1000, hash_cpos, compare_cpos)
 {
     int windoww, windowh;
     StateWindow::instance()->get_dimensions(&windoww, &windowh);
@@ -84,9 +85,11 @@ World::World()
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         Logger::stdout.log(Logger::FATAL) << "Bad world post-process framebuffer" << Logger::MessageStream::endl;
 
-    chunk = new Chunk(0,0,0);
-    ChunkGen::random(chunk);
-    chunk->remesh();
+    long3_t cpos = {0,0,0};
+    Chunk *chnk = new Chunk(0,0,0);
+    chunks.insert({cpos, chnk});
+    ChunkGen::random(chnk);
+    chnk->remesh();
 
     GLenum glerr = glGetError();
     if(glerr != GL_NO_ERROR)
@@ -98,7 +101,9 @@ World::~World()
 {
     glDeleteProgram(pre_program);
     glDeleteProgram(post_program);
-    delete chunk;
+
+    for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
+        delete it->second;
 }
 
 void World::render()
@@ -133,7 +138,8 @@ void World::render()
     mat4_t matrix = gettranslatematrix(0, 0, 0);
     glUniformMatrix4fv(pre_uniform_modelmatrix, 1, GL_FALSE, matrix.mat);
 
-    chunk->render();
+    for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
+        it->second->render();
 
     //render to screen
     glUseProgram(post_program);

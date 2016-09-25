@@ -7,7 +7,7 @@
 
 StateTest *StateTest::instance_ = NULL;
 StateTest::StateTest()
-    :fps_limit(60)
+    :fps_limit(120)
 {
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::StateTest()" << Logger::MessageStream::endl;
 }

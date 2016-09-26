@@ -39,7 +39,10 @@ private:
     ChunkMap chunks;
     WorldGenerator generator;
 
-    void chunk_loader_func();
+    bool stopthreads = false;
+    std::thread *chunk_loader;
+    Limiter chunk_loader_limiter;
+    void chunk_loader_func(SDL_GLContext);
 
     static GLuint pre_program;
     static GLuint pre_uniform_viewprojectionmatrix;

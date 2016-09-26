@@ -109,3 +109,16 @@ void StateWindow::get_dimensions(int *windoww, int *windowh)
     *windoww = this->windoww;
     *windowh = this->windowh;
 }
+
+SDL_GLContext StateWindow::create_shared_gl_context()
+{
+    SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+    SDL_GLContext glcon = SDL_GL_CreateContext(win);
+    SDL_GL_MakeCurrent(win, glcontext);
+    return glcon;
+}
+
+void StateWindow::make_gl_context_current(SDL_GLContext glcon)
+{
+    SDL_GL_MakeCurrent(win, glcon);
+}

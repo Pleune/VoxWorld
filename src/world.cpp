@@ -21,14 +21,20 @@ World::Renderbuff World::renderbuffer;
 
 World::World()
     :chunks(1000, hash_cpos, compare_cpos),
-     generator(8)
+     generator(8),
+     chunk_loader_limiter(10)
 {
+    SDL_GLContext glcon = StateWindow::instance()->create_shared_gl_context();
+    chunk_loader = new std::thread(&World::chunk_loader_func, this, glcon);
 }
 
 World::~World()
 {
+    stopthreads = true;
+    chunk_loader->join();
     for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
         delete it->second;
+    delete chunk_loader;
 }
 
 void World::init()
@@ -119,7 +125,7 @@ void World::cleanup()
 
 void World::render()
 {
-    chunk_loader_func();
+    //chunk_loader_func();
 
     static float theta = 0;
     theta += .01;
@@ -188,53 +194,62 @@ void World::update_window_size()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, windoww, windowh, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 }
 
-void World::chunk_loader_func()
+void World::chunk_loader_func(SDL_GLContext glcon)
 {
-    long3_t center = {0,0,0};
-    bool loaded[21][21][21];
-    std::fill_n(&loaded[0][0][0], 21*21*21, false);
+    StateWindow::instance()->make_gl_context_current(glcon);
 
-    for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
+    while(!stopthreads)
     {
-        long3_t localpos = {
-            it->first.x - center.x,
-            it->first.y - center.y,
-            it->first.z - center.z
-        };
+        long3_t center = {0,0,0};
+        bool loaded[21][21][21];
+        std::fill_n(&loaded[0][0][0], 21*21*21, false);
 
-        if(localpos.x >= -10 && localpos.x <= 10 &&
-           localpos.y >= -10 && localpos.y <= 10 &&
-           localpos.z >= -10 && localpos.z <= 10)
+        for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
         {
-            loaded[localpos.x+10][localpos.y+10][localpos.z+10] = true;
-        } else {
-            if(it->second == NULL)
-                continue;
+            long3_t localpos = {
+                it->first.x - center.x,
+                it->first.y - center.y,
+                it->first.z - center.z
+            };
 
-            Chunk *tmp = it->second;
-            chunks.erase(it);
-            delete tmp;
-        }
-    }
-
-    for(int x=0; x<21; x++)
-    for(int y=0; y<21; y++)
-    for(int z=0; z<21; z++)
-    {
-        if(loaded[x][y][z] == false)
-        {
-            long3_t cpos = {x-10, y-10, z-10};
-            Chunk *chnk = new Chunk(cpos.x, cpos.y, cpos.z);
-            auto ret = chunks.insert({cpos, NULL});
-            ChunkMap::iterator it = ret.first;
-            if(ret.second)
+            if(localpos.x >= -10 && localpos.x <= 10 &&
+               localpos.y >= -10 && localpos.y <= 10 &&
+               localpos.z >= -10 && localpos.z <= 10)
             {
-                generator.generate(&(it->second), chnk,
-                                   &ChunkGen::random);
+                loaded[localpos.x+10][localpos.y+10][localpos.z+10] = true;
             } else {
-                Logger::stdout.log(Logger::ERROR) << "World::chunk_loader_func(): failed to insert new chunk!";
-                delete chnk;
+                if(it->second == NULL)
+                    continue;
+
+                Chunk *tmp = it->second;
+                chunks.erase(it);
+                delete tmp;
             }
         }
+
+        for(int x=0; x<21; x++)
+        for(int y=0; y<21; y++)
+        for(int z=0; z<21; z++)
+        {
+            if(loaded[x][y][z] == false)
+            {
+                long3_t cpos = {x-10, y-10, z-10};
+                Chunk *chnk = new Chunk(cpos.x, cpos.y, cpos.z);
+                auto ret = chunks.insert({cpos, NULL});
+                ChunkMap::iterator it = ret.first;
+                if(ret.second)
+                {
+                    generator.generate(&(it->second), chnk,
+                                       &ChunkGen::random);
+                } else {
+                    Logger::stdout.log(Logger::ERROR) << "World::chunk_loader_func(): failed to insert new chunk!";
+                    delete chnk;
+                }
+            }
+        }
+
+        chunk_loader_limiter.delay();
     }
+
+    SDL_GL_DeleteContext(glcon);
 }

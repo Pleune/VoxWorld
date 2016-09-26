@@ -20,6 +20,9 @@ public:
     void swap();
     void get_dimensions(int *windoww, int *windowh);
 
+    SDL_GLContext create_shared_gl_context();
+    void make_gl_context_current(SDL_GLContext);
+
 	static StateWindow *instance();
 
 private:

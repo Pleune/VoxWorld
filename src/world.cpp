@@ -22,7 +22,7 @@ World::Renderbuff World::renderbuffer;
 World::World()
     :chunks(1000, hash_cpos, compare_cpos),
      generator(8),
-     chunk_loader_limiter(10)
+     chunk_loader_limiter(5)
 {
     SDL_GLContext glcon = StateWindow::instance()->create_shared_gl_context();
     chunk_loader = new std::thread(&World::chunk_loader_func, this, glcon);
@@ -125,6 +125,7 @@ void World::cleanup()
 
 void World::render()
 {
+    center = {0,0,0};
     //chunk_loader_func();
 
     static float theta = 0;
@@ -143,7 +144,7 @@ void World::render()
 
     vec3_t forward = {cos(theta), 1, sin(theta)};
     static const vec3_t height = {0, 1.65, 0};
-    vec3_t pos = {-cos(theta)*22*16, 22*16, -sin(theta)*22*16};
+    vec3_t pos = {-cos(theta)*22*16, 10*16, -sin(theta)*22*16};
     static const vec3_t up = {0, 1, 0};
 
     mat4_t view = getviewmatrix(height, forward, up);
@@ -155,7 +156,11 @@ void World::render()
     for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
     {
         if(it->second)
+        {
+            it->second->lock(Chunk::READ);
             it->second->render(pos);
+            it->second->unlock();
+        }
     }
 
     //render to screen
@@ -198,67 +203,55 @@ void World::chunk_loader_func(SDL_GLContext glcon)
 {
     StateWindow::instance()->make_gl_context_current(glcon);
 
-    struct {
-        bool is_working;
-        Chunk *chunk;
-    } working[21][21][21];
-    for(int x=0; x<21; x++)
-    for(int y=0; y<21; y++)
-    for(int z=0; z<21; z++)
-        working[x][y][z] = {false, 0};
+    const int radius = 10;
 
     while(!stopthreads)
     {
-        long3_t center = {0,0,0};
-        Chunk *loaded[21][21][21];
-        for(int x=0; x<21; x++)
-        for(int y=0; y<21; y++)
-        for(int z=0; z<21; z++)
-            loaded[x][y][z] = NULL;
-
-        for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
+        ChunkMap::iterator it = chunks.begin();
+    next:
+        while(it!=chunks.end())
         {
-            long3_t localpos = {
-                it->first.x - center.x,
-                it->first.y - center.y,
-                it->first.z - center.z
-            };
-
-            if(localpos.x >= -10 && localpos.x <= 10 &&
-               localpos.y >= -10 && localpos.y <= 10 &&
-               localpos.z >= -10 && localpos.z <= 10)
+            long3_t cpos = it->first;
+            long double dist;
+            distlong3(&dist, &cpos, &center);
+            if(dist > radius)
             {
-                loaded[localpos.x+10][localpos.y+10][localpos.z+10] = it->second;
-            } else {
-                if(it->second == NULL)
-                    continue;
-
-                Chunk *tmp = it->second;
-                chunks.erase(it);
-                delete tmp;
+                Chunk *chnk = it->second;
+                if(chnk)
+                {
+                    chnk->lock(Chunk::WRITE);
+                    it = chunks.erase(it);
+                    chnk->unlock();
+                    delete chnk;
+                    goto next;
+                }
             }
+            it++;
         }
 
-        for(int x=0; x<21; x++)
-        for(int y=0; y<21; y++)
-        for(int z=0; z<21; z++)
+        for(int x = -radius + center.x; x<= radius + center.x; x++)
+        for(int y = -radius + center.y; y<= radius + center.y; y++)
+        for(int z = -radius + center.z; z<= radius + center.z; z++)
         {
-            if(loaded[x][y][z] == NULL)
+            long3_t cpos = {x,y,z};
+            long double dist;
+            distlong3(&dist, &cpos, &center);
+            if(dist < radius)
             {
-                long3_t cpos = {x-10, y-10, z-10};
-                if(working[x][y][z].is_working)
+                ChunkMap::iterator it = chunks.find(cpos);
+                if(it == chunks.end())
                 {
-                    if(working[x][y][z].chunk)
-                    {
-                        working[x][y][z].chunk->force_mesh_upload();
-                        chunks.insert({cpos, working[x][y][z].chunk});
-                        working[x][y][z] = {false, 0};
-                    }
-                } else {
                     Chunk *chnk = new Chunk(cpos.x, cpos.y, cpos.z);
-                    generator.generate(&(working[x][y][z].chunk), chnk,
-                                       &ChunkGen::random);
-                    working[x][y][z].is_working = true;
+                    auto ret = chunks.insert({cpos, NULL});
+                    it = ret.first;
+                    if(ret.second)
+                    {
+                        generator.generate(&(it->second), chnk,
+                                           &ChunkGen::flat);
+                    } else {
+                        Logger::stdout.log(Logger::ERROR) << "World::chunk_loader_func(): failed to insert new chunk!";
+                        delete chnk;
+                    }
                 }
             }
         }

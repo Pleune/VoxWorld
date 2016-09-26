@@ -60,6 +60,12 @@ void StateTest::run(GameEngine *engine)
 
     StateWindow::instance()->swap();
 
+    GLenum err = GL_NO_ERROR;
+    while((err = glGetError()) != GL_NO_ERROR)
+    {
+        Logger::stdout.log(Logger::ERROR) << "OpenGL Error: " << err << Logger::MessageStream::endl;
+    }
+
     fps_limit.delay();
 }
 

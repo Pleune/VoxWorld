@@ -36,6 +36,7 @@ private:
         std::function<bool(long3_t, long3_t)>>
         ChunkMap;
 
+    long3_t center = {0,0,0};
     ChunkMap chunks;
     WorldGenerator generator;
 

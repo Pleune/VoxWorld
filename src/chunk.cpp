@@ -280,6 +280,12 @@ void Chunk::remesh()
     num_vertices_ = elements.size();
 }
 
+void Chunk::force_mesh_upload()
+{
+    mesh.bind(GL_ARRAY_BUFFER);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 Block::ID Chunk::get(int x, int y, int z)
 {
     return data.get(x, y, z);

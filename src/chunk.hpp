@@ -19,6 +19,7 @@ public:
     long num_vertices();
 
     void remesh();
+    void force_mesh_upload();
 
     Block::ID get(int x, int y, int z);
     void set(int x, int y, int z, Block::ID id);

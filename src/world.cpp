@@ -198,11 +198,23 @@ void World::chunk_loader_func(SDL_GLContext glcon)
 {
     StateWindow::instance()->make_gl_context_current(glcon);
 
+    struct {
+        bool is_working;
+        Chunk *chunk;
+    } working[21][21][21];
+    for(int x=0; x<21; x++)
+    for(int y=0; y<21; y++)
+    for(int z=0; z<21; z++)
+        working[x][y][z] = {false, 0};
+
     while(!stopthreads)
     {
         long3_t center = {0,0,0};
-        bool loaded[21][21][21];
-        std::fill_n(&loaded[0][0][0], 21*21*21, false);
+        Chunk *loaded[21][21][21];
+        for(int x=0; x<21; x++)
+        for(int y=0; y<21; y++)
+        for(int z=0; z<21; z++)
+            loaded[x][y][z] = NULL;
 
         for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
         {
@@ -216,7 +228,7 @@ void World::chunk_loader_func(SDL_GLContext glcon)
                localpos.y >= -10 && localpos.y <= 10 &&
                localpos.z >= -10 && localpos.z <= 10)
             {
-                loaded[localpos.x+10][localpos.y+10][localpos.z+10] = true;
+                loaded[localpos.x+10][localpos.y+10][localpos.z+10] = it->second;
             } else {
                 if(it->second == NULL)
                     continue;
@@ -231,19 +243,22 @@ void World::chunk_loader_func(SDL_GLContext glcon)
         for(int y=0; y<21; y++)
         for(int z=0; z<21; z++)
         {
-            if(loaded[x][y][z] == false)
+            if(loaded[x][y][z] == NULL)
             {
                 long3_t cpos = {x-10, y-10, z-10};
-                Chunk *chnk = new Chunk(cpos.x, cpos.y, cpos.z);
-                auto ret = chunks.insert({cpos, NULL});
-                ChunkMap::iterator it = ret.first;
-                if(ret.second)
+                if(working[x][y][z].is_working)
                 {
-                    generator.generate(&(it->second), chnk,
-                                       &ChunkGen::random);
+                    if(working[x][y][z].chunk)
+                    {
+                        working[x][y][z].chunk->force_mesh_upload();
+                        chunks.insert({cpos, working[x][y][z].chunk});
+                        working[x][y][z] = {false, 0};
+                    }
                 } else {
-                    Logger::stdout.log(Logger::ERROR) << "World::chunk_loader_func(): failed to insert new chunk!";
-                    delete chnk;
+                    Chunk *chnk = new Chunk(cpos.x, cpos.y, cpos.z);
+                    generator.generate(&(working[x][y][z].chunk), chnk,
+                                       &ChunkGen::random);
+                    working[x][y][z].is_working = true;
                 }
             }
         }

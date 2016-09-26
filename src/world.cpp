@@ -23,19 +23,6 @@ World::World()
     :chunks(1000, hash_cpos, compare_cpos),
      generator(8)
 {
-    for(int x=-10; x<11; x++)
-    for(int z=-10; z<11; z++)
-    {
-        long3_t cpos = {x,0,z};
-        Chunk *chnk = new Chunk(x,0,z);
-        ChunkMap::iterator it = chunks.insert({cpos, NULL}).first;
-        generator.generate(&(it->second), chnk, &ChunkGen::random);
-    }
-
-    GLenum glerr = glGetError();
-    if(glerr != GL_NO_ERROR)
-        Logger::stdout.log(Logger::FATAL) << "OpenGL error code " << glerr << " after World::World()"
-                                          << Logger::MessageStream::endl;
 }
 
 World::~World()
@@ -132,6 +119,8 @@ void World::cleanup()
 
 void World::render()
 {
+    chunk_loader_func();
+
     static float theta = 0;
     theta += .01;
 
@@ -148,7 +137,7 @@ void World::render()
 
     vec3_t forward = {cos(theta), 1, sin(theta)};
     static const vec3_t height = {0, 1.65, 0};
-    vec3_t pos = {-cos(theta)*40, 40, -sin(theta)*40};
+    vec3_t pos = {-cos(theta)*22*16, 22*16, -sin(theta)*22*16};
     static const vec3_t up = {0, 1, 0};
 
     mat4_t view = getviewmatrix(height, forward, up);
@@ -197,4 +186,55 @@ void World::update_window_size()
 
     glBindTexture(GL_TEXTURE_2D, renderbuffer.depthbuffer);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, windoww, windowh, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+}
+
+void World::chunk_loader_func()
+{
+    long3_t center = {0,0,0};
+    bool loaded[21][21][21];
+    std::fill_n(&loaded[0][0][0], 21*21*21, false);
+
+    for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
+    {
+        long3_t localpos = {
+            it->first.x - center.x,
+            it->first.y - center.y,
+            it->first.z - center.z
+        };
+
+        if(localpos.x >= -10 && localpos.x <= 10 &&
+           localpos.y >= -10 && localpos.y <= 10 &&
+           localpos.z >= -10 && localpos.z <= 10)
+        {
+            loaded[localpos.x+10][localpos.y+10][localpos.z+10] = true;
+        } else {
+            if(it->second == NULL)
+                continue;
+
+            Chunk *tmp = it->second;
+            chunks.erase(it);
+            delete tmp;
+        }
+    }
+
+    for(int x=0; x<21; x++)
+    for(int y=0; y<21; y++)
+    for(int z=0; z<21; z++)
+    {
+        if(loaded[x][y][z] == false)
+        {
+            long3_t cpos = {x-10, y-10, z-10};
+            Chunk *chnk = new Chunk(cpos.x, cpos.y, cpos.z);
+            auto ret = chunks.insert({cpos, NULL});
+            ChunkMap::iterator it = ret.first;
+            if(ret.second)
+            {
+                generator.generate(&(it->second), chnk,
+                                   &ChunkGen::random);
+            } else {
+                Logger::stdout.log(Logger::ERROR) << "World::chunk_loader_func(): failed to insert new chunk!";
+                delete chnk;
+            }
+        }
+    }
 }

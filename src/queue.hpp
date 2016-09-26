@@ -6,7 +6,7 @@
 #include <queue>
 
 template<typename T>
-class Queue {
+class TQueue {
 public:
     void push(T value)
     {

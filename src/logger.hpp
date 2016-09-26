@@ -41,7 +41,7 @@ public:
 
         level log_level;
         std::ostringstream stream;
-        std::shared_ptr<Queue<std::shared_ptr<Message>>> flush_queue;
+        std::shared_ptr<TQueue<std::shared_ptr<Message>>> flush_queue;
     };
 
     explicit Logger();
@@ -67,7 +67,7 @@ private:
     std::map<std::thread::id, level> log_levels;
     bool thread_stop;
     std::shared_ptr<std::thread> object_thread;
-    std::shared_ptr<Queue<std::shared_ptr<Message>>> msg_queue;
+    std::shared_ptr<TQueue<std::shared_ptr<Message>>> msg_queue;
 };
 
 #endif

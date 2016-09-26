@@ -17,7 +17,7 @@ Logger::MessageStream::~MessageStream()
 Logger::Logger()
     :print_all(false),
      thread_stop(false),
-     msg_queue(new Queue<std::shared_ptr<Message>>())
+     msg_queue(new TQueue<std::shared_ptr<Message>>())
 {
     object_thread = std::shared_ptr<std::thread> (new std::thread(&Logger::run, this));
 

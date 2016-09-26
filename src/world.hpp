@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include "chunk.hpp"
+#include "worldgenerator.hpp"
 
 class World {
 public:
@@ -35,6 +36,7 @@ private:
         ChunkMap;
 
     ChunkMap chunks;
+    WorldGenerator generator;
 
     static GLuint pre_program;
     static GLuint pre_uniform_viewprojectionmatrix;

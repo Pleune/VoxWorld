@@ -29,6 +29,7 @@ GameState::Status StateWindow::init()
         Logger::stdout.log(Logger::ERROR) << "GameWindow::GameWindow(): glewInit failed" << Logger::MessageStream::endl;
 
     SDL_GetWindowSize(win, &windoww, &windowh);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     if(SDL_GL_SetSwapInterval(-1) == -1)
         if(SDL_GL_SetSwapInterval(1) == -1)
             SDL_GL_SetSwapInterval(0);

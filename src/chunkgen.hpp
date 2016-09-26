@@ -4,6 +4,7 @@
 #include "chunk.hpp"
 
 namespace ChunkGen {
+    typedef void (*GenFunc)(Chunk *);
     void random(Chunk *target);
 };
 

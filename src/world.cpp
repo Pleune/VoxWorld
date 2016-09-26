@@ -20,16 +20,16 @@ GLuint World::post_buffer_target;
 World::Renderbuff World::renderbuffer;
 
 World::World()
-    :chunks(1000, hash_cpos, compare_cpos)
+    :chunks(1000, hash_cpos, compare_cpos),
+     generator(8)
 {
     for(int x=-10; x<11; x++)
     for(int z=-10; z<11; z++)
     {
         long3_t cpos = {x,0,z};
         Chunk *chnk = new Chunk(x,0,z);
-        chunks.insert({cpos, chnk});
-        ChunkGen::random(chnk);
-        chnk->remesh();
+        ChunkMap::iterator it = chunks.insert({cpos, NULL}).first;
+        generator.generate(&(it->second), chnk, &ChunkGen::random);
     }
 
     GLenum glerr = glGetError();
@@ -158,7 +158,10 @@ void World::render()
     glUniformMatrix4fv(pre_uniform_viewprojectionmatrix, 1, GL_FALSE, vp.mat);
 
     for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
-        it->second->render(pos);
+    {
+        if(it->second)
+            it->second->render(pos);
+    }
 
     //render to screen
     glUseProgram(post_program);

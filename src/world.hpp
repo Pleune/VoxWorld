@@ -5,13 +5,14 @@
 #include "chunk.hpp"
 #include "worldgenerator.hpp"
 #include "limiter.hpp"
+#include "camera.hpp"
 
 class World {
 public:
     World();
     ~World();
 
-    void render();
+    void render(Camera camera);
 
     void update_window_size();
 

@@ -15,6 +15,8 @@ public:
 	Status resume();
 	Status pause();
 
+    void input();
+
 	void run(GameEngine *);
 	void event(SDL_Event *e);
 
@@ -29,8 +31,13 @@ private:
         bool exit = false;
     } queue;
 
+    bool takeinput = true;
+    Camera camera;
+    struct {float x,y;} rot;
+
     Textbox *text;
     World *world;
+    const Uint8 *keyboard;
 
     Limiter fps_limit;
 

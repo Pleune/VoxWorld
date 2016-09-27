@@ -123,13 +123,14 @@ void World::cleanup()
     Chunk::cleanup();
 }
 
-void World::render()
+void World::render(Camera camera)
 {
-    center = {0,0,0};
-    //chunk_loader_func();
-
-    static float theta = 0;
-    theta += .01;
+    int chunk_size = Chunk::size();
+    center = {
+        (int)std::roundf((camera.pos.x - chunk_size/2)/chunk_size),
+        0,//(int)(camera.pos.y - chunk_size/2)/chunk_size,
+        (int)std::roundf((camera.pos.z - chunk_size/2)/chunk_size),
+    };
 
     int windoww, windowh;
     StateWindow::instance()->get_dimensions(&windoww, &windowh);
@@ -142,12 +143,8 @@ void World::render()
 
     mat4_t projection = getprojectionmatrix(90, (float)windoww / (float)windowh, 3000, .1);
 
-    vec3_t forward = {cos(theta), 1, sin(theta)};
-    static const vec3_t height = {0, 1.65, 0};
-    vec3_t pos = {-cos(theta)*22*16, 10*16, -sin(theta)*22*16};
-    static const vec3_t up = {0, 1, 0};
-
-    mat4_t view = getviewmatrix(height, forward, up);
+    static const vec3_t zero = {0, 0, 0};
+    mat4_t view = getviewmatrix(zero, camera.forward, camera.up);
 
     mat4_t vp;
     dotmat4mat4(&vp, &projection, &view);
@@ -158,7 +155,7 @@ void World::render()
         if(it->second)
         {
             it->second->lock(Chunk::READ);
-            it->second->render(pos);
+            it->second->render(camera.pos);
             it->second->unlock();
         }
     }

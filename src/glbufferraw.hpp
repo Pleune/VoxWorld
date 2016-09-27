@@ -12,8 +12,10 @@ public:
 
     inline void bind(GLenum target)
     {
+        upload_m.lock();
         glBindBuffer(target, buffer);
         make_current(target);
+        upload_m.unlock();
     }
 
     inline void set(void *data, size_t len, GLenum usage)
@@ -38,24 +40,18 @@ private:
     inline void make_current(GLenum target)
     {
         if(upload_ready)
-        if(upload_m.try_lock())
         {
-            if(upload_ready)
-            {
-                glBufferData(target, data_len, data_, data_usage);
-                delete[] data_;
-                data_ = 0;
-                upload_ready = false;
-            }
-
-            upload_m.unlock();
+            glBufferData(target, data_len, data_, data_usage);
+            delete[] data_;
+            data_ = 0;
+            upload_ready = false;
         }
     }
 
     std::mutex upload_m;
     bool upload_ready = false;
     unsigned char *data_ = 0;
-    size_t data_len;
+    size_t data_len = 0;
     GLenum data_usage;
 
     GLuint buffer;

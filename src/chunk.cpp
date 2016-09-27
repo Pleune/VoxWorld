@@ -42,10 +42,6 @@ void Chunk::render(vec3_t camera_pos)
 
         mesh.bind(GL_ELEMENT_ARRAY_BUFFER);
 
-
-
-        //long3_t chunkpos = chunk_pos_get(data[x][y][z].chunk);
-        //long3_t worldpos = get_worldpos_from_chunkpos(&chunkpos);
         vec3_t wpos = {(float)(pos.x*side_len),
                        (float)(pos.y*side_len),
                        (float)(pos.z*side_len)};
@@ -278,12 +274,15 @@ void Chunk::remesh()
 
     mesh.set(elements.data(), elements.size() * sizeof(GLuint), GL_STATIC_DRAW);
     num_vertices_ = elements.size();
+    has_mesh = true;
 }
 
 void Chunk::force_mesh_upload()
 {
-    mesh.bind(GL_ARRAY_BUFFER);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    if(!has_mesh)
+        Logger::stdout.log(Logger::ERROR) << "OOPS";
+    mesh.bind(GL_ELEMENT_ARRAY_BUFFER);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 Block::ID Chunk::get(int x, int y, int z)

@@ -1,6 +1,7 @@
 #include "world.hpp"
 
 #include <cstdlib>
+#include <list>
 #include "chunk.hpp"
 #include "custommath.h"
 #include "gl.h"
@@ -22,8 +23,9 @@ World::Renderbuff World::renderbuffer;
 World::World()
     :chunks(1000, hash_cpos, compare_cpos),
      generator(8),
-     chunk_loader_limiter(5)
+     chunk_loader_limiter(4)
 {
+    center = {0,0,0};
     SDL_GLContext glcon = StateWindow::instance()->create_shared_gl_context();
     chunk_loader = new std::thread(&World::chunk_loader_func, this, glcon);
 }
@@ -32,6 +34,8 @@ World::~World()
 {
     stopthreads = true;
     chunk_loader->join();
+    if(chunks_for_render)
+        delete chunks_for_render;
     for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
         delete it->second;
     delete chunk_loader;
@@ -150,15 +154,13 @@ void World::render(Camera camera)
     dotmat4mat4(&vp, &projection, &view);
     glUniformMatrix4fv(pre_uniform_viewprojectionmatrix, 1, GL_FALSE, vp.mat);
 
-    for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
+    chunks_for_render_m.lock();
+    if(chunks_for_render)
     {
-        if(it->second)
-        {
-            it->second->lock(Chunk::READ);
-            it->second->render(camera.pos);
-            it->second->unlock();
-        }
+        for(std::vector<Chunk *>::iterator it = chunks_for_render->begin(); it != chunks_for_render->end(); it++)
+            (*it)->render(camera.pos);
     }
+    chunks_for_render_m.unlock();
 
     //render to screen
     glUseProgram(post_program);
@@ -198,59 +200,107 @@ void World::update_window_size()
 
 void World::chunk_loader_func(SDL_GLContext glcon)
 {
+    //Create opengl context to allow uploading of mesh in this thread
     StateWindow::instance()->make_gl_context_current(glcon);
 
-    const int radius = 10;
+    const int radius = 15;
+    int i=0;
+
+    //intermediate structure to store generated chunks before their
+    //meshes are uploaded
+    std::list<Chunk *> chunks_in_gen;
 
     while(!stopthreads)
     {
-        ChunkMap::iterator it = chunks.begin();
-    next:
-        while(it!=chunks.end())
+        long3_t center_ = this->center;
+        i++;
+        std::vector<Chunk *> chunks_for_delete;
+
+        //Search for chunks to be removed from map
+        for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end();)
         {
             long3_t cpos = it->first;
             long double dist;
-            distlong3(&dist, &cpos, &center);
+            distlong3(&dist, &cpos, &center_);
             if(dist > radius)
             {
                 Chunk *chnk = it->second;
                 if(chnk)
                 {
-                    chnk->lock(Chunk::WRITE);
+                    chunks_for_delete.push_back(chnk);
                     it = chunks.erase(it);
-                    chnk->unlock();
-                    delete chnk;
-                    goto next;
+                } else {
+                    it++;
                 }
+            } else {
+                it++;
             }
-            it++;
         }
 
-        for(int x = -radius + center.x; x<= radius + center.x; x++)
-        for(int y = -radius + center.y; y<= radius + center.y; y++)
-        for(int z = -radius + center.z; z<= radius + center.z; z++)
+        //The next set of chunks to be rendered from
+        std::vector<Chunk *> *render_vec = new std::vector<Chunk *>;
+
+        //Search for chunks that need to be generated
+        for(int x = -radius + center_.x; x<= radius + center_.x; x++)
+        for(int y = -radius + center_.y; y<= radius + center_.y; y++)
+        for(int z = -radius + center_.z; z<= radius + center_.z; z++)
         {
             long3_t cpos = {x,y,z};
             long double dist;
-            distlong3(&dist, &cpos, &center);
+            distlong3(&dist, &cpos, &center_);
             if(dist < radius)
             {
                 ChunkMap::iterator it = chunks.find(cpos);
                 if(it == chunks.end())
                 {
                     Chunk *chnk = new Chunk(cpos.x, cpos.y, cpos.z);
-                    auto ret = chunks.insert({cpos, NULL});
-                    it = ret.first;
-                    if(ret.second)
-                    {
-                        generator.generate(&(it->second), chnk,
-                                           &ChunkGen::flat);
-                    } else {
-                        Logger::stdout.log(Logger::ERROR) << "World::chunk_loader_func(): failed to insert new chunk!";
-                        delete chnk;
-                    }
+                    //put chunks in queue to be generated into
+                    //queue to be uploaded
+                    chunks_in_gen.push_back(0);
+                    generator.generate(&(chunks_in_gen.back()), chnk,
+                                       &ChunkGen::crap_hills);
+                } else {
+                    if(it->second)
+                        render_vec->push_back(it->second);
                 }
             }
+        }
+
+        //Upload meshes of chunks that have just ben generated
+        for(std::list<Chunk *>::iterator it = chunks_in_gen.begin(); it != chunks_in_gen.end();)
+        {
+            if(*it != NULL)
+            {
+                (*it)->force_mesh_upload();
+                chunks.insert({(*it)->cpos(), (*it)});
+                it = chunks_in_gen.erase(it);
+            } else {
+                it++;
+            }
+        }
+
+        //Make sure that the force_mesh_upload gets placed into the
+        //GPU queue
+        glFlush();
+
+        //only swap list when not in render loop
+        chunks_for_render_m.lock();
+        std::vector<Chunk *> *tmp_render_vec = chunks_for_render;
+        chunks_for_render = render_vec;
+        chunks_for_render_m.unlock();
+        if(tmp_render_vec)
+            delete tmp_render_vec;
+
+        //Actually delete chunks after new list is in place
+        for(std::vector<Chunk *>::iterator it = chunks_for_delete.begin(); it != chunks_for_delete.end(); it++)
+        {
+            delete (*it);
+        }
+
+        GLenum err = GL_NO_ERROR;
+        while((err = glGetError()) != GL_NO_ERROR)
+        {
+            Logger::stdout.log(Logger::ERROR) << "OpenGL Error: " << err << Logger::MessageStream::endl;
         }
 
         chunk_loader_limiter.delay();

@@ -45,6 +45,7 @@ private:
     VoxelTree<Block::ID, 2> data;
 
     long num_vertices_;
+    bool has_mesh = false;
 
     static GLuint static_index_elements[2];
     static int side_len;

@@ -21,6 +21,11 @@ GameState::Status StateTest::init()
     text = new Textbox(10, 10, 400, 30, Textbox::ROBOTO_REGULAR, Textbox::MEDIUM, color, "Press ESC to quit.", Textbox::NONE);
     world = new World();
     rot = {0,0};
+    camera = {
+        {0,0,0},
+        {0,0,0},
+        {0,0,0}
+    };
 
     fps_limit.mark();
 
@@ -84,7 +89,7 @@ void StateTest::input()
     rotatevec.z = std::sin(rot.x)*inputvec.x + std::cos(rot.x)*inputvec.z;
     rotatevec.y = inputvec.y;
 
-    #define PLAYER_SPEED .3
+    #define PLAYER_SPEED 1
     rotatevec.x *= PLAYER_SPEED;
     rotatevec.y *= PLAYER_SPEED;
     rotatevec.z *= PLAYER_SPEED;

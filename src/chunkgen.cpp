@@ -15,6 +15,9 @@ void ChunkGen::random(Chunk *target)
     }
 
     target->unlock();
+    target->lock(Chunk::READ);
+    target->remesh();
+    target->unlock();
 }
 
 void ChunkGen::flat(Chunk *target)
@@ -35,6 +38,9 @@ void ChunkGen::flat(Chunk *target)
             target->set(x,y,z, Block::GRASS);
     }
 
+    target->unlock();
+    target->lock(Chunk::READ);
+    target->remesh();
     target->unlock();
 }
 
@@ -58,5 +64,8 @@ void ChunkGen::crap_hills(Chunk *target)
             target->set(x,y,z, Block::GRASS);
     }
 
+    target->unlock();
+    target->lock(Chunk::READ);
+    target->remesh();
     target->unlock();
 }

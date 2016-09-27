@@ -43,7 +43,6 @@ void WorldGenerator::worker()
         if(m.chunk)
         {
             m.f(m.chunk);
-            m.chunk->remesh();
             *m.ret = m.chunk;
         }
     }

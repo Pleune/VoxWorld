@@ -2,6 +2,7 @@
 #define BLOCKS_WORLD_H
 
 #include <unordered_map>
+#include <vector>
 #include "chunk.hpp"
 #include "worldgenerator.hpp"
 #include "limiter.hpp"
@@ -39,6 +40,8 @@ private:
 
     long3_t center = {0,0,0};
     ChunkMap chunks;
+    std::vector<Chunk *> *chunks_for_render = 0;
+    std::mutex chunks_for_render_m;
     WorldGenerator generator;
 
     bool stopthreads = false;

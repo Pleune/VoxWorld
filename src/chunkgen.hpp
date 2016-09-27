@@ -7,6 +7,7 @@ namespace ChunkGen {
     typedef void (*GenFunc)(Chunk *);
     void random(Chunk *target);
     void flat(Chunk *target);
+    void crap_hills(Chunk *target);
 };
 
 #endif

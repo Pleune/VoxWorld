@@ -8,7 +8,7 @@
 class GLBufferRaw {
 public:
     inline GLBufferRaw() {glGenBuffers(1, &buffer);}
-    inline ~GLBufferRaw() {glDeleteBuffers(1, &buffer);}
+    inline ~GLBufferRaw() {glDeleteBuffers(1, &buffer); if(data_) delete data_;}
 
     inline void bind(GLenum target)
     {

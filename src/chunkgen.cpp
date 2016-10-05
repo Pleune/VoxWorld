@@ -1,6 +1,6 @@
 #include "chunkgen.hpp"
 
-void ChunkGen::random(Chunk *target)
+void ChunkGeneratorRandom::generate(Chunk *target)
 {
     target->lock(Chunk::WRITE);
     int c_width = Chunk::size();
@@ -17,7 +17,7 @@ void ChunkGen::random(Chunk *target)
     target->unlock();
 }
 
-void ChunkGen::flat(Chunk *target)
+void ChunkGeneratorFlat::generate(Chunk *target)
 {
     target->lock(Chunk::WRITE);
     int c_width = Chunk::size();
@@ -38,7 +38,7 @@ void ChunkGen::flat(Chunk *target)
     target->unlock();
 }
 
-void ChunkGen::crap_hills(Chunk *target)
+void ChunkGeneratorCrapHills::generate(Chunk *target)
 {
     target->lock(Chunk::WRITE);
     int c_width = Chunk::size();

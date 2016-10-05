@@ -28,13 +28,13 @@ WorldGenerator::~WorldGenerator()
     delete[] threads;
 }
 
-void WorldGenerator::generate(Chunk **ret, Chunk *chunk, ChunkGen::GenFunc f)
+void WorldGenerator::generate(Chunk **ret, Chunk *chunk, ChunkGenerator *generator)
 {
     Message m;
     m.m_type = Message::GENERATION;
     m.data.generation.ret = ret;
     m.data.generation.chunk = chunk;
-    m.data.generation.f = f;
+    m.data.generation.generator = generator;
     chunk->lock_delete();
     queue.push(m);
 }
@@ -105,7 +105,7 @@ void WorldGenerator::generation_f(Message &m)
 
         if(m.data.generation.chunk)
         {
-            m.data.generation.f(m.data.generation.chunk);
+            m.data.generation.generator->generate(m.data.generation.chunk);
             *m.data.generation.ret = m.data.generation.chunk;
         }
 }

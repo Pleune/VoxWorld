@@ -27,6 +27,7 @@ World::World()
     center = {0,0,0};
     SDL_GLContext glcon = StateWindow::instance()->create_shared_gl_context();
     client_tick_t = new std::thread(&World::client_tick_func, this, glcon);
+    chunk_generator = new ChunkGeneratorCrapHills();
 }
 
 World::~World()
@@ -38,6 +39,7 @@ World::~World()
     for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
         delete it->second;
     delete client_tick_t;
+    delete chunk_generator;
 }
 
 void World::init()
@@ -258,7 +260,7 @@ void World::client_tick_regenerate(const long3_t &center)
                 if(pair.second)//was inserted
                 {
                     generator.generate(&(pair.first->second), chnk,
-                                       &ChunkGen::crap_hills);
+                                       chunk_generator);
                 } else {//collision
                 }
             }

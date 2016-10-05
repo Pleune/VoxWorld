@@ -11,7 +11,7 @@ public:
     WorldGenerator(int num_threads);
     ~WorldGenerator();
 
-    void generate(Chunk **ret, Chunk *chunk, ChunkGen::GenFunc);
+    void generate(Chunk **ret, Chunk *chunk, ChunkGenerator *);
     void remesh(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chunk *chunksouth, Chunk *chunkeast, Chunk *chunkwest);
 
 private:
@@ -21,7 +21,7 @@ private:
             struct {
                 Chunk **ret;
                 Chunk *chunk;
-                ChunkGen::GenFunc f;
+                ChunkGenerator *generator;
             } generation;
             struct {
                 Chunk *chunk;

@@ -8,6 +8,7 @@
 GLuint Chunk::static_index_elements[2] = {0,0};
 int Chunk::side_len = 16;
 int Chunk::side_len_p1 = 17;
+int Chunk::side_len_m1 = 15;
 
 GLuint Chunk::draw_program;
 GLuint Chunk::draw_uniform_modelmatrix;
@@ -20,7 +21,7 @@ Chunk::Chunk(long x, long y, long z)
 
 void Chunk::render(vec3_t camera_pos)
 {
-    if(num_vertices_ > 0)
+    if(num_vertices_ > 0 && has_mesh)
     {
         glBindBuffer(GL_ARRAY_BUFFER, static_index_elements[0]);
         glVertexAttribPointer(
@@ -55,7 +56,7 @@ void Chunk::render(vec3_t camera_pos)
     }
 }
 
-void Chunk::remesh()
+void Chunk::remesh(Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chunk *chunksouth, Chunk *chunkeast, Chunk *chunkwest)
 {
     const static int faces[] = {
         //top
@@ -113,12 +114,78 @@ void Chunk::remesh()
         0,0,0
     };
 
-    Chunk *chunkabove = 0;
-    Chunk *chunkbelow = 0;
-    Chunk *chunknorth = 0;
-    Chunk *chunksouth = 0;
-    Chunk *chunkeast = 0;
-    Chunk *chunkwest = 0;
+    Block::ID *above_b = new Block::ID[side_len*side_len];
+    Block::ID *below_b = new Block::ID[side_len*side_len];
+    Block::ID *north_b = new Block::ID[side_len*side_len];
+    Block::ID *south_b = new Block::ID[side_len*side_len];
+    Block::ID *east_b = new Block::ID[side_len*side_len];
+    Block::ID *west_b = new Block::ID[side_len*side_len];
+
+    if(chunkabove)
+    {
+        chunkabove->lock(READ);
+        for(int x=0; x<side_len; x++)
+        for(int z=0; z<side_len; z++)
+            above_b[x + side_len*z] = chunkabove->get(x, 0, z);
+        chunkabove->unlock();
+    } else {
+        std::fill_n(above_b, side_len*side_len, Block::AIR);
+    }
+
+    if(chunkbelow)
+    {
+        chunkbelow->lock(READ);
+        for(int x=0; x<side_len; x++)
+        for(int z=0; z<side_len; z++)
+            below_b[x + side_len*z] = chunkbelow->get(x, side_len_m1, z);
+        chunkbelow->unlock();
+    } else {
+        std::fill_n(below_b, side_len*side_len, Block::AIR);
+    }
+
+    if(chunknorth)
+    {
+        chunknorth->lock(READ);
+        for(int x=0; x<side_len; x++)
+        for(int y=0; y<side_len; y++)
+            north_b[x + side_len*y] = chunknorth->get(x, y, side_len_m1);
+        chunknorth->unlock();
+    } else {
+        std::fill_n(north_b, side_len*side_len, Block::AIR);
+    }
+
+    if(chunksouth)
+    {
+        chunksouth->lock(READ);
+        for(int x=0; x<side_len; x++)
+        for(int y=0; y<side_len; y++)
+            south_b[x + side_len*y] = chunksouth->get(x, y, 0);
+        chunksouth->unlock();
+    } else {
+        std::fill_n(south_b, side_len*side_len, Block::AIR);
+    }
+
+    if(chunkeast)
+    {
+        chunkeast->lock(READ);
+        for(int y=0; y<side_len; y++)
+        for(int z=0; z<side_len; z++)
+            east_b[y + side_len*z] = chunkeast->get(0, y, z);
+        chunkeast->unlock();
+    } else {
+        std::fill_n(east_b, side_len*side_len, Block::AIR);
+    }
+
+    if(chunkwest)
+    {
+        chunkwest->lock(READ);
+        for(int y=0; y<side_len; y++)
+        for(int z=0; z<side_len; z++)
+            west_b[y + side_len*z] = chunkwest->get(side_len_m1, y, z);
+        chunkwest->unlock();
+    } else {
+        std::fill_n(west_b, side_len*side_len, Block::AIR);
+    }
 
     std::vector<GLuint> elements;
     int x, y, z;
@@ -130,111 +197,56 @@ void Chunk::remesh()
             {
                 Block::ID block = data.get(x, y, z);
                 if(block != Block::AIR)
-                {
-                    //TODO: remove =1 cases
-                    int top=1, bottom=1, south=1, north=1, east=1, west=1;
+                {                    int top=1, bottom=1, south=1, north=1, east=1, west=1;
 
                     if(y==side_len-1)
                     {
-                        if(chunkabove)
-                        {
-                            //block_t b = get_block(chunkabove, x,0,z);
-                            //if(b.id != AIR && (block.id != WATER || block.metadata.number == SIM_WATER_LEVELS))
-                            //    top=0;
-                            //else
-                            //    top=1;
-                        } else
-                            top=1;
+                        if(Block::is_solid(above_b[x + side_len*z]))
+                            top = 0;
                     } else {
                         if(Block::is_solid(data.get(x,y+1,z)))
                             top = 0;
-                        else
-                            top = 1;
                     }
                     if(y==0)
                     {
-                        if(chunkbelow)
-                        {
-                            //if(get_block(chunkbelow, x,side_len-1,z).id)
-                            //    bottom=0;
-                            //else
-                            //    bottom=1;
-                        } else
-                            bottom=1;
+                        if(Block::is_solid(below_b[x + side_len*z]))
+                            bottom = 0;
                     } else {
                         if(Block::is_solid(data.get(x,y-1,z)))
                             bottom = 0;
-                        else
-                            bottom = 1;
                     }
                     if(z==side_len-1)
                     {
-                        if(chunksouth)
-                        {
-                            //block_t b = get_block(chunksouth, x,y,0);
-                            //if(b.id != AIR && (b.id != WATER || (block.id == WATER && b.metadata.number == block.metadata.number)))
-                            //    south=0;
-                            //else
-                            //    south=1;
-                        } else
-                            south=1;
+                        if(Block::is_solid(south_b[x + side_len*y]))
+                            south = 0;
                     } else {
                         if(Block::is_solid(data.get(x,y,z+1)))
                             south = 0;
-                        else
-                            south = 1;
                     }
                     if(z==0)
                     {
-                        if(chunknorth)
-                        {
-                            //block_t b = get_block(chunknorth, x,y,CHUNKSIZE-1);
-                            //if(b.id != AIR && (b.id != WATER || (block.id == WATER && b.metadata.number == block.metadata.number)))
-                            //    north=0;
-                            //else
-                            //    north=1;
-                        } else
-                            north=1;
+                        if(Block::is_solid(north_b[x + side_len*y]))
+                            north = 0;
                     } else {
                         if(Block::is_solid(data.get(x,y,z-1)))
                             north = 0;
-                        else
-                            north = 1;
                     }
 
                     if(x==side_len-1)
                     {
-                        if(chunkeast)
-                        {
-                            //block_t b = get_block(chunkeast, 0,y,z);
-                            //if(b.id != AIR && (b.id != WATER || (block.id == WATER && b.metadata.number == block.metadata.number)))
-                            //    east=0;
-                            //else
-                            //    east=1;
-                        } else
-                            east=1;
+                        if(Block::is_solid(east_b[y + side_len*z]))
+                            east = 0;
                     } else {
                         if(Block::is_solid(data.get(x+1,y,z)))
                             east = 0;
-                        else
-                            east = 1;
                     }
                     if(x==0)
                     {
-                        if(chunkwest)
-                        {
-                            //block_t b = get_block(chunkwest, CHUNKSIZE-1,y,z);
-                            //if(b.id != AIR && (b.id != WATER || (block.id == WATER && b.metadata.number == block.metadata.number)))
-                            //    west=0;
-                            //else
-                            //    west=1;
-                        } else
-                            west=1;
+                        if(Block::is_solid(west_b[y + side_len*z]))
+                            west = 0;
                     } else {
                         if(Block::is_solid(data.get(x-1,y,z)))
                             west = 0;
-                        else
-                            west = 1;
                     }
 
                     int U[6] = {
@@ -271,6 +283,13 @@ void Chunk::remesh()
             }
         }
     }
+
+    delete[] above_b;
+    delete[] below_b;
+    delete[] north_b;
+    delete[] south_b;
+    delete[] east_b;
+    delete[] west_b;
 
     mesh.set(elements.data(), elements.size() * sizeof(GLuint), GL_STATIC_DRAW);
     num_vertices_ = elements.size();

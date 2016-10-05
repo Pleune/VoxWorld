@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <list>
 #include "chunk.hpp"
 #include "worldgenerator.hpp"
 #include "limiter.hpp"
@@ -39,15 +40,21 @@ private:
         ChunkMap;
 
     long3_t center = {0,0,0};
+    int radius = 10;
     ChunkMap chunks;
     std::vector<Chunk *> *chunks_for_render = 0;
     std::mutex chunks_for_render_m;
     WorldGenerator generator;
 
     bool stopthreads = false;
-    std::thread *chunk_loader;
-    Limiter chunk_loader_limiter;
-    void chunk_loader_func(SDL_GLContext);
+
+    //Client tick stuff
+    std::thread *client_tick_t;
+    Limiter client_tick_lim;
+    void client_tick_func(SDL_GLContext);
+    std::list<Chunk *> client_tick_markfordelete(const long3_t &center);
+    void client_tick_regenerate(const long3_t &center);
+    void client_tick_remesh();
 
     static GLuint pre_program;
     static GLuint pre_uniform_viewprojectionmatrix;

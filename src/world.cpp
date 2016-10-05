@@ -1,7 +1,6 @@
 #include "world.hpp"
 
 #include <cstdlib>
-#include <list>
 #include "chunk.hpp"
 #include "custommath.h"
 #include "gl.h"
@@ -22,23 +21,23 @@ World::Renderbuff World::renderbuffer;
 
 World::World()
     :chunks(1000, hash_cpos, compare_cpos),
-     generator(8),
-     chunk_loader_limiter(4)
+     generator(4),
+     client_tick_lim(10)
 {
     center = {0,0,0};
     SDL_GLContext glcon = StateWindow::instance()->create_shared_gl_context();
-    chunk_loader = new std::thread(&World::chunk_loader_func, this, glcon);
+    client_tick_t = new std::thread(&World::client_tick_func, this, glcon);
 }
 
 World::~World()
 {
     stopthreads = true;
-    chunk_loader->join();
+    client_tick_t->join();
     if(chunks_for_render)
         delete chunks_for_render;
     for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
         delete it->second;
-    delete chunk_loader;
+    delete client_tick_t;
 }
 
 void World::init()
@@ -198,104 +197,163 @@ void World::update_window_size()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, windoww, windowh, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 }
 
-void World::chunk_loader_func(SDL_GLContext glcon)
+std::list<Chunk *> World::client_tick_markfordelete(const long3_t &center)
+{
+    //The next set of chunks to be rendered from
+    std::vector<Chunk *> *render_vec = new std::vector<Chunk *>;
+    std::list<Chunk *> chunks_for_delete;
+
+    //Search for chunks to be removed from map
+    for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end();)
+    {
+        long3_t cpos = it->first;
+        long double dist;
+        distlong3(&dist, &cpos, &center);
+        if(dist > radius)
+        {
+            Chunk *chnk = it->second;
+            if(chnk)
+            {
+                chunks_for_delete.push_back(chnk);
+                it = chunks.erase(it);
+            } else {
+                it++;
+            }
+        } else {
+            if(it->second)
+                render_vec->push_back(it->second);
+            it++;
+        }
+    }
+
+    //Swap render list out from under the render thread
+    //only swap list when not in render loop
+    chunks_for_render_m.lock();
+    std::vector<Chunk *> *tmp_render_vec = chunks_for_render;
+    chunks_for_render = render_vec;
+    chunks_for_render_m.unlock();
+    if(tmp_render_vec)
+        delete tmp_render_vec;
+
+    return chunks_for_delete;//should use std::move instead of copy contructor?
+}
+
+void World::client_tick_regenerate(const long3_t &center)
+{
+    //Search for chunks that need to be generated
+    for(int x = -radius + center.x; x<= radius + center.x; x++)
+    for(int y = -radius + center.y; y<= radius + center.y; y++)
+    for(int z = -radius + center.z; z<= radius + center.z; z++)
+    {
+        long3_t cpos = {x,y,z};
+        long double dist;
+        distlong3(&dist, &cpos, &center);
+        if(dist < radius)
+        {
+            ChunkMap::iterator it = chunks.find(cpos);
+            if(it == chunks.end())
+            {
+                Chunk *chnk = new Chunk(cpos.x, cpos.y, cpos.z);
+                auto pair = chunks.insert({cpos, NULL});
+                if(pair.second)//was inserted
+                {
+                    generator.generate(&(pair.first->second), chnk,
+                                       &ChunkGen::crap_hills);
+                } else {//collision
+                }
+            }
+        }
+    }
+}
+
+void World::client_tick_remesh()
+{
+    //Upload meshes of chunks that have just ben generated
+    for(ChunkMap::iterator it = chunks.begin(); it != chunks.end(); it++)
+    {
+        Chunk * chunk = it->second;
+        if(chunk != NULL)
+        {
+            if(chunk->meshed())
+            {
+                //chunk->force_mesh_upload();
+                //chunks.insert({(*it)->cpos(), (*it)});
+                //static int i = 0;
+            } else {
+                long3_t cpos = chunk->cpos();
+
+                ChunkMap::iterator end = chunks.end();
+                ChunkMap::iterator it_a = chunks.find({cpos.x, cpos.y+1, cpos.z});
+                ChunkMap::iterator it_b = chunks.find({cpos.x, cpos.y-1, cpos.z});
+                ChunkMap::iterator it_n = chunks.find({cpos.x, cpos.y, cpos.z-1});
+                ChunkMap::iterator it_s = chunks.find({cpos.x, cpos.y, cpos.z+1});
+                ChunkMap::iterator it_e = chunks.find({cpos.x+1, cpos.y, cpos.z});
+                ChunkMap::iterator it_w = chunks.find({cpos.x-1, cpos.y, cpos.z});
+
+                Chunk *chunkabove = it_a == end ? 0 : it_a->second;
+                Chunk *chunkbelow = it_b == end ? 0 : it_b->second;
+                Chunk *chunknorth = it_n == end ? 0 : it_n->second;
+                Chunk *chunksouth = it_s == end ? 0 : it_s->second;
+                Chunk *chunkeast = it_e == end ? 0 : it_e->second;
+                Chunk *chunkwest = it_w == end ? 0 : it_w->second;
+
+                if(chunkabove && chunkbelow && chunknorth && chunksouth && chunkeast && chunkwest)
+                {
+                    generator.remesh(chunk,
+                                     chunkabove,
+                                     chunkbelow,
+                                     chunknorth,
+                                     chunksouth,
+                                     chunkeast,
+                                     chunkwest);
+                }
+            }
+        }
+    }
+}
+
+void World::client_tick_func(SDL_GLContext glcon)
 {
     //Create opengl context to allow uploading of mesh in this thread
     StateWindow::instance()->make_gl_context_current(glcon);
 
-    const int radius = 15;
-    int i=0;
-
-    //intermediate structure to store generated chunks before their
-    //meshes are uploaded
-    std::list<Chunk *> chunks_in_gen;
+    std::list<Chunk *> chunks_for_delete;
 
     while(!stopthreads)
     {
         long3_t center_ = this->center;
-        i++;
-        std::vector<Chunk *> chunks_for_delete;
 
-        //Search for chunks to be removed from map
-        for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end();)
-        {
-            long3_t cpos = it->first;
-            long double dist;
-            distlong3(&dist, &cpos, &center_);
-            if(dist > radius)
-            {
-                Chunk *chnk = it->second;
-                if(chnk)
-                {
-                    chunks_for_delete.push_back(chnk);
-                    it = chunks.erase(it);
-                } else {
-                    it++;
-                }
-            } else {
-                it++;
-            }
-        }
+        chunks_for_delete.splice(chunks_for_delete.begin(), client_tick_markfordelete(center_));
+        chunks_for_delete.sort();
+        chunks_for_delete.unique();
 
-        //The next set of chunks to be rendered from
-        std::vector<Chunk *> *render_vec = new std::vector<Chunk *>;
-
-        //Search for chunks that need to be generated
-        for(int x = -radius + center_.x; x<= radius + center_.x; x++)
-        for(int y = -radius + center_.y; y<= radius + center_.y; y++)
-        for(int z = -radius + center_.z; z<= radius + center_.z; z++)
-        {
-            long3_t cpos = {x,y,z};
-            long double dist;
-            distlong3(&dist, &cpos, &center_);
-            if(dist < radius)
-            {
-                ChunkMap::iterator it = chunks.find(cpos);
-                if(it == chunks.end())
-                {
-                    Chunk *chnk = new Chunk(cpos.x, cpos.y, cpos.z);
-                    //put chunks in queue to be generated into
-                    //queue to be uploaded
-                    chunks_in_gen.push_back(0);
-                    generator.generate(&(chunks_in_gen.back()), chnk,
-                                       &ChunkGen::crap_hills);
-                } else {
-                    if(it->second)
-                        render_vec->push_back(it->second);
-                }
-            }
-        }
-
-        //Upload meshes of chunks that have just ben generated
-        for(std::list<Chunk *>::iterator it = chunks_in_gen.begin(); it != chunks_in_gen.end();)
-        {
-            if(*it != NULL)
-            {
-                (*it)->force_mesh_upload();
-                chunks.insert({(*it)->cpos(), (*it)});
-                it = chunks_in_gen.erase(it);
-            } else {
-                it++;
-            }
-        }
+        client_tick_regenerate(center_);
+        client_tick_remesh();
 
         //Make sure that the force_mesh_upload gets placed into the
         //GPU queue
-        glFlush();
-
-        //only swap list when not in render loop
-        chunks_for_render_m.lock();
-        std::vector<Chunk *> *tmp_render_vec = chunks_for_render;
-        chunks_for_render = render_vec;
-        chunks_for_render_m.unlock();
-        if(tmp_render_vec)
-            delete tmp_render_vec;
+        //glFlush();
 
         //Actually delete chunks after new list is in place
-        for(std::vector<Chunk *>::iterator it = chunks_for_delete.begin(); it != chunks_for_delete.end(); it++)
+        for(std::list<Chunk *>::iterator it = chunks_for_delete.begin(); it != chunks_for_delete.end();)
         {
-            delete (*it);
+            chunks_for_render_m.lock();//lock inside the loop to give
+                                       //render thread many
+                                       //opertunities to relock for itself
+
+            if((*it)->can_delete())
+            {
+                delete (*it);
+                it = chunks_for_delete.erase(it);
+            } else {
+                it++;
+            }
+            //Logger::stdout.log(Logger::ERROR) << "cant delete
+            //chunk." << Logger::MessageStream::endl;
+
+            chunks_for_render_m.unlock();
         }
+
 
         GLenum err = GL_NO_ERROR;
         while((err = glGetError()) != GL_NO_ERROR)
@@ -303,7 +361,7 @@ void World::chunk_loader_func(SDL_GLContext glcon)
             Logger::stdout.log(Logger::ERROR) << "OpenGL Error: " << err << Logger::MessageStream::endl;
         }
 
-        chunk_loader_limiter.delay();
+        client_tick_lim.delay();
     }
 
     SDL_GL_DeleteContext(glcon);

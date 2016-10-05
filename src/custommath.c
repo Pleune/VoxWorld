@@ -22,7 +22,7 @@ imax(int a, int b)
 }
 
 long double *
-distlong3(long double *out, long3_t *a, long3_t *b)
+distlong3(long double *out, const long3_t *a, const long3_t *b)
 {
 	long3_t a_ = *a;
 	a_.x -= b->x;
@@ -34,7 +34,7 @@ distlong3(long double *out, long3_t *a, long3_t *b)
 
 
 vec3_t *
-normalvec3(vec3_t *out, vec3_t *in)
+normalvec3(vec3_t *out, const vec3_t *in)
 {
 	float mag = sqrt( (in->x)*(in->x) + (in->y)*(in->y) + (in->z)*(in->z));
 	out->x = in->x / mag;
@@ -44,7 +44,7 @@ normalvec3(vec3_t *out, vec3_t *in)
 }
 
 vec3_t *
-crossvec3(vec3_t *out, vec3_t *a, vec3_t *b)
+crossvec3(vec3_t *out, const vec3_t *a, const vec3_t *b)
 {
 	//incase out is a or b
 	vec3_t intermediary;
@@ -69,7 +69,7 @@ subtractvec3(vec3_t *out, vec3_t *a, vec3_t *b)
 }
 
 mat4_t *
-dotmat4mat4(mat4_t *out, mat4_t *a, mat4_t *b)
+dotmat4mat4(mat4_t *out, const mat4_t *a, const mat4_t *b)
 {
 	float mat[16];
 

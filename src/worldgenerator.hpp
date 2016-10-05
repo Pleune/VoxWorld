@@ -12,15 +12,33 @@ public:
     ~WorldGenerator();
 
     void generate(Chunk **ret, Chunk *chunk, ChunkGen::GenFunc);
+    void remesh(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chunk *chunksouth, Chunk *chunkeast, Chunk *chunkwest);
 
 private:
     struct Message {
-        Chunk **ret;
-        Chunk *chunk;
-        ChunkGen::GenFunc f;
+        enum Type {GENERATION, REMESH, CLOSE_SIG} m_type;
+        union {
+            struct {
+                Chunk **ret;
+                Chunk *chunk;
+                ChunkGen::GenFunc f;
+            } generation;
+            struct {
+                Chunk *chunk;
+                Chunk *chunkabove;
+                Chunk *chunkbelow;
+                Chunk *chunknorth;
+                Chunk *chunksouth;
+                Chunk *chunkeast;
+                Chunk *chunkwest;
+            } remesh;
+        } data;
     };
 
     void worker();
+
+    void generation_f(Message &m);
+    void remesh_f(Message &m);
 
     TQueue<Message> queue;
     bool stop_threads = false;

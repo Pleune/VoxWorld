@@ -18,7 +18,8 @@ public:
     void render(vec3_t camera_pos);
     long num_vertices();
 
-    void remesh();
+    void remesh(Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chunk *chunksouth, Chunk *chunkeast, Chunk *chunkwest);
+    bool meshed() {return has_mesh;}
     void force_mesh_upload();
 
     Block::ID get(int x, int y, int z);
@@ -34,6 +35,10 @@ public:
 
     static int size() {return side_len;}
 
+    void lock_delete() {dont_delete++;}
+    void unlock_delete() {dont_delete--;}
+    bool can_delete() {return dont_delete == 0;}
+
 private:
     long3_t pos;
 
@@ -46,10 +51,12 @@ private:
 
     long num_vertices_;
     bool has_mesh = false;
+    int dont_delete = 0;
 
     static GLuint static_index_elements[2];
     static int side_len;
     static int side_len_p1;
+    static int side_len_m1;
 
     static GLuint draw_program;
     static GLuint draw_uniform_modelmatrix;

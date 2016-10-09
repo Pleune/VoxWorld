@@ -10,5 +10,6 @@ public:
 };
 
 #include "chunkgen_simple.hpp"
+#include "chunkgen_perlin.hpp"
 
 #endif

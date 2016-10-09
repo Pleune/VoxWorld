@@ -27,7 +27,7 @@ World::World()
     center = {0,0,0};
     SDL_GLContext glcon = StateWindow::instance()->create_shared_gl_context();
     client_tick_t = new std::thread(&World::client_tick_func, this, glcon);
-    chunk_generator = new ChunkGeneratorCrapHills();
+    chunk_generator = new ChunkGeneratorPerlin();
 }
 
 World::~World()
@@ -133,7 +133,7 @@ void World::render(Camera camera)
     int chunk_size = Chunk::size();
     center = {
         (int)std::roundf((camera.pos.x - chunk_size/2)/chunk_size),
-        0,//(int)(camera.pos.y - chunk_size/2)/chunk_size,
+        (int)std::roundf((camera.pos.y - chunk_size/2)/chunk_size),
         (int)std::roundf((camera.pos.z - chunk_size/2)/chunk_size),
     };
 

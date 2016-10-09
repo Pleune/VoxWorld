@@ -1,5 +1,5 @@
-#ifndef BLOCKS_CHUNKGEN_FLAT_H
-#define BLOCKS_CHUNKGEN_FLAT_H
+#ifndef BLOCKS_CHUNKGEN_SIMPLE_H
+#define BLOCKS_CHUNKGEN_SIMPLE_H
 
 #include "chunkgen.hpp"
 

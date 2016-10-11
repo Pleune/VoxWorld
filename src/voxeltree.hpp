@@ -22,6 +22,14 @@ public:
         delete root_;
     }
 
+    void fill(T block)
+    {
+        auto tmp = root_;
+        root_ = new Node(LEAF);
+        root_->leaf_set(block);
+        delete tmp;
+    }
+
     const T &get(int x, int y, int z)
     {
         Node *node = root_;

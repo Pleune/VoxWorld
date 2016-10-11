@@ -58,6 +58,7 @@ private:
 
     void run();
     void print_msg(std::shared_ptr<Message> MessageStream);
+    int next = 0;
     int thread_id(std::thread::id);
     std::string get_prefix(std::shared_ptr<Message> message);
     level get_level(std::thread::id);

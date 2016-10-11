@@ -76,7 +76,6 @@ void Logger::print_msg(std::shared_ptr<Message> message)
 
 int Logger::thread_id(std::thread::id thread_id)
 {
-    int next = 0;
     static std::map<std::thread::id, int> ids;
     if(ids.find(thread_id) == ids.end())
         ids[thread_id] = next++;

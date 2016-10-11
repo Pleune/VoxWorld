@@ -40,7 +40,7 @@ private:
         ChunkMap;
 
     long3_t center = {0,0,0};
-    int radius = 10;
+    int radius = 15;
     ChunkMap chunks;
     std::vector<Chunk *> *chunks_for_render = 0;
     std::mutex chunks_for_render_m;
@@ -53,9 +53,8 @@ private:
     std::thread *client_tick_t;
     Limiter client_tick_lim;
     void client_tick_func(SDL_GLContext);
-    std::list<Chunk *> client_tick_markfordelete(const long3_t &center);
+    std::list<Chunk *> client_tick_maploop(const long3_t &center);
     void client_tick_regenerate(const long3_t &center);
-    void client_tick_remesh();
 
     static GLuint pre_program;
     static GLuint pre_uniform_viewprojectionmatrix;

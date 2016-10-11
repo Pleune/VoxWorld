@@ -7,6 +7,7 @@
 #include "state_window.hpp"
 #include "logger.hpp"
 #include "chunkgen.hpp"
+#include "worldgen.hpp"
 
 GLuint World::pre_program;
 GLuint World::pre_uniform_viewprojectionmatrix;
@@ -199,7 +200,7 @@ void World::update_window_size()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, windoww, windowh, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 }
 
-std::list<Chunk *> World::client_tick_markfordelete(const long3_t &center)
+std::list<Chunk *> World::client_tick_maploop(const long3_t &center)
 {
     //The next set of chunks to be rendered from
     std::vector<Chunk *> *render_vec = new std::vector<Chunk *>;
@@ -211,20 +212,81 @@ std::list<Chunk *> World::client_tick_markfordelete(const long3_t &center)
         long3_t cpos = it->first;
         long double dist;
         distlong3(&dist, &cpos, &center);
-        if(dist > radius)
+        Chunk *chnk = it->second;
+
+        if(chnk != NULL)
         {
-            Chunk *chnk = it->second;
-            if(chnk)
+            if(dist > radius)
             {
                 chunks_for_delete.push_back(chnk);
                 it = chunks.erase(it);
             } else {
+                render_vec->push_back(it->second);
+
+                switch(chnk->gen_level())
+                {
+                case 2:
+                    {
+                        long3_t cpos = chnk->cpos();
+
+                        ChunkMap::iterator end = chunks.end();
+                        ChunkMap::iterator it_a = chunks.find({cpos.x, cpos.y+1, cpos.z});
+                        ChunkMap::iterator it_b = chunks.find({cpos.x, cpos.y-1, cpos.z});
+
+                        Chunk *chunkabove = it_a == end ? 0 : it_a->second;
+                        Chunk *chunkbelow = it_b == end ? 0 : it_b->second;
+
+                        if(chunkabove && chunkbelow)
+                        {
+                            generator.generate(chnk,
+                                               chunkabove,
+                                               chunkbelow,
+                                               &WorldGen::normal);
+
+                            chnk->gen_inc();
+                        }
+
+                        break;
+                    }
+                case 4:
+                    {
+                        long3_t cpos = chnk->cpos();
+
+                        ChunkMap::iterator end = chunks.end();
+                        ChunkMap::iterator it_a = chunks.find({cpos.x, cpos.y+1, cpos.z});
+                        ChunkMap::iterator it_b = chunks.find({cpos.x, cpos.y-1, cpos.z});
+                        ChunkMap::iterator it_n = chunks.find({cpos.x, cpos.y, cpos.z-1});
+                        ChunkMap::iterator it_s = chunks.find({cpos.x, cpos.y, cpos.z+1});
+                        ChunkMap::iterator it_e = chunks.find({cpos.x+1, cpos.y, cpos.z});
+                        ChunkMap::iterator it_w = chunks.find({cpos.x-1, cpos.y, cpos.z});
+
+                        Chunk *chunkabove = it_a == end ? 0 : it_a->second;
+                        Chunk *chunkbelow = it_b == end ? 0 : it_b->second;
+                        Chunk *chunknorth = it_n == end ? 0 : it_n->second;
+                        Chunk *chunksouth = it_s == end ? 0 : it_s->second;
+                        Chunk *chunkeast = it_e == end ? 0 : it_e->second;
+                        Chunk *chunkwest = it_w == end ? 0 : it_w->second;
+
+                        if(chunkabove && chunkbelow && chunknorth && chunksouth && chunkeast && chunkwest)
+                        {
+                            generator.remesh(chnk,
+                                             chunkabove,
+                                             chunkbelow,
+                                             chunknorth,
+                                             chunksouth,
+                                             chunkeast,
+                                             chunkwest);
+
+                            chnk->gen_inc();
+                        }
+
+
+                        break;
+                    }
+                }
+
                 it++;
             }
-        } else {
-            if(it->second)
-                render_vec->push_back(it->second);
-            it++;
         }
     }
 
@@ -256,58 +318,11 @@ void World::client_tick_regenerate(const long3_t &center)
             if(it == chunks.end())
             {
                 Chunk *chnk = new Chunk(cpos.x, cpos.y, cpos.z);
-                auto pair = chunks.insert({cpos, NULL});
+                auto pair = chunks.insert({cpos, chnk});
                 if(pair.second)//was inserted
                 {
-                    generator.generate(&(pair.first->second), chnk,
-                                       chunk_generator);
-                } else {//collision
-                }
-            }
-        }
-    }
-}
-
-void World::client_tick_remesh()
-{
-    //Upload meshes of chunks that have just ben generated
-    for(ChunkMap::iterator it = chunks.begin(); it != chunks.end(); it++)
-    {
-        Chunk * chunk = it->second;
-        if(chunk != NULL)
-        {
-            if(chunk->meshed())
-            {
-                //chunk->force_mesh_upload();
-                //chunks.insert({(*it)->cpos(), (*it)});
-                //static int i = 0;
-            } else {
-                long3_t cpos = chunk->cpos();
-
-                ChunkMap::iterator end = chunks.end();
-                ChunkMap::iterator it_a = chunks.find({cpos.x, cpos.y+1, cpos.z});
-                ChunkMap::iterator it_b = chunks.find({cpos.x, cpos.y-1, cpos.z});
-                ChunkMap::iterator it_n = chunks.find({cpos.x, cpos.y, cpos.z-1});
-                ChunkMap::iterator it_s = chunks.find({cpos.x, cpos.y, cpos.z+1});
-                ChunkMap::iterator it_e = chunks.find({cpos.x+1, cpos.y, cpos.z});
-                ChunkMap::iterator it_w = chunks.find({cpos.x-1, cpos.y, cpos.z});
-
-                Chunk *chunkabove = it_a == end ? 0 : it_a->second;
-                Chunk *chunkbelow = it_b == end ? 0 : it_b->second;
-                Chunk *chunknorth = it_n == end ? 0 : it_n->second;
-                Chunk *chunksouth = it_s == end ? 0 : it_s->second;
-                Chunk *chunkeast = it_e == end ? 0 : it_e->second;
-                Chunk *chunkwest = it_w == end ? 0 : it_w->second;
-
-                if(chunkabove && chunkbelow && chunknorth && chunksouth && chunkeast && chunkwest)
-                {
-                    generator.remesh(chunk,
-                                     chunkabove,
-                                     chunkbelow,
-                                     chunknorth,
-                                     chunksouth,
-                                     chunkeast,
-                                     chunkwest);
+                    generator.generate(chnk, chunk_generator);
+                    chnk->gen_inc();
                 }
             }
         }
@@ -325,12 +340,11 @@ void World::client_tick_func(SDL_GLContext glcon)
     {
         long3_t center_ = this->center;
 
-        chunks_for_delete.splice(chunks_for_delete.begin(), client_tick_markfordelete(center_));
+        chunks_for_delete.splice(chunks_for_delete.begin(), client_tick_maploop(center_));
         chunks_for_delete.sort();
         chunks_for_delete.unique();
 
         client_tick_regenerate(center_);
-        client_tick_remesh();
 
         //Make sure that the force_mesh_upload gets placed into the
         //GPU queue
@@ -350,8 +364,6 @@ void World::client_tick_func(SDL_GLContext glcon)
             } else {
                 it++;
             }
-            //Logger::stdout.log(Logger::ERROR) << "cant delete
-            //chunk." << Logger::MessageStream::endl;
 
             chunks_for_render_m.unlock();
         }

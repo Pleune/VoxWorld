@@ -5,24 +5,31 @@
 #include "queue.hpp"
 #include "chunk.hpp"
 #include "chunkgen.hpp"
+#include "worldgen.hpp"
 
 class WorldGenerator {
 public:
     WorldGenerator(int num_threads);
     ~WorldGenerator();
 
-    void generate(Chunk **ret, Chunk *chunk, ChunkGenerator *);
+    void generate(Chunk *chunk, ChunkGenerator *);
+    void generate(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, WorldGen::GenFunc genfunc);
     void remesh(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chunk *chunksouth, Chunk *chunkeast, Chunk *chunkwest);
 
 private:
     struct Message {
-        enum Type {GENERATION, REMESH, CLOSE_SIG} m_type;
+        enum Type {GENERATIONA, GENERATIONB,  REMESH, CLOSE_SIG} m_type;
         union {
             struct {
-                Chunk **ret;
                 Chunk *chunk;
                 ChunkGenerator *generator;
-            } generation;
+            } generationa;
+            struct {
+                Chunk *chunk;
+                Chunk *chunkabove;
+                Chunk *chunkbelow;
+                WorldGen::GenFunc genfunc;
+            } generationb;
             struct {
                 Chunk *chunk;
                 Chunk *chunkabove;
@@ -37,7 +44,8 @@ private:
 
     void worker();
 
-    void generation_f(Message &m);
+    void generationa_f(Message &m);
+    void generationb_f(Message &m);
     void remesh_f(Message &m);
 
     TQueue<Message> queue;

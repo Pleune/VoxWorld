@@ -1,5 +1,7 @@
 #include "worldgenerator.hpp"
 
+#include "logger.hpp"
+
 WorldGenerator::WorldGenerator(int num_threads)
     :num_threads(num_threads)
 {
@@ -28,14 +30,28 @@ WorldGenerator::~WorldGenerator()
     delete[] threads;
 }
 
-void WorldGenerator::generate(Chunk **ret, Chunk *chunk, ChunkGenerator *generator)
+void WorldGenerator::generate(Chunk *chunk, ChunkGenerator *generator)
 {
     Message m;
-    m.m_type = Message::GENERATION;
-    m.data.generation.ret = ret;
-    m.data.generation.chunk = chunk;
-    m.data.generation.generator = generator;
+    m.m_type = Message::GENERATIONA;
+    m.data.generationa.chunk = chunk;
+    m.data.generationa.generator = generator;
     chunk->lock_delete();
+    queue.push(m);
+}
+
+void WorldGenerator::generate(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, WorldGen::GenFunc genfunc)
+{
+    Message m;
+    m.m_type = Message::GENERATIONB;
+    m.data.generationb.chunk = chunk;
+    m.data.generationb.chunkabove = chunkabove;
+    m.data.generationb.chunkbelow = chunkbelow;
+    m.data.generationb.genfunc = genfunc;
+    chunk->lock_delete();
+    chunkabove->lock_delete();
+    chunkbelow->lock_delete();
+
     queue.push(m);
 }
 
@@ -68,15 +84,29 @@ void WorldGenerator::remesh(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, 
 
 void WorldGenerator::worker()
 {
+    Logger::stdout.set_print_level(Logger::DEBUG);
+
+    Uint32 time_gena = 0;
+    Uint32 time_genb = 0;
+    Uint32 time_remesh = 0;
     while(!stop_threads)
     {
         Message m;
         queue.pop(m);
+        Uint32 start_time = SDL_GetTicks();
         switch(m.m_type)
         {
-        case Message::GENERATION:
-            generation_f(m);
-            m.data.generation.chunk->unlock_delete();
+        case Message::GENERATIONA:
+            generationa_f(m);
+            m.data.generationa.chunk->unlock_delete();
+            time_gena += SDL_GetTicks() - start_time;
+            break;
+        case Message::GENERATIONB:
+            generationb_f(m);
+            m.data.generationb.chunk->unlock_delete();
+            m.data.generationb.chunkabove->unlock_delete();
+            m.data.generationb.chunkbelow->unlock_delete();
+            time_genb += SDL_GetTicks() - start_time;
             break;
         case Message::REMESH:
             remesh_f(m);
@@ -93,20 +123,42 @@ void WorldGenerator::worker()
                 m.data.remesh.chunkeast->unlock_delete();
             if(m.data.remesh.chunkwest)
                 m.data.remesh.chunkwest->unlock_delete();
+            time_remesh += SDL_GetTicks() - start_time;
             break;
         case Message::CLOSE_SIG:
             break;
         }
     }
+
+    Logger::stdout.log(Logger::INFO) << "Worker thread times:\n"
+                                     << "Time GenerateA: " << time_gena << "\n"
+                                     << "Time GenerateB: " << time_genb << "\n"
+                                     << "Time Remesh:    " << time_remesh << Logger::MessageStream::endl;
 }
 
-void WorldGenerator::generation_f(Message &m)
+void WorldGenerator::generationa_f(Message &m)
 {
 
-        if(m.data.generation.chunk)
+        if(m.data.generationa.chunk)
         {
-            m.data.generation.generator->generate(m.data.generation.chunk);
-            *m.data.generation.ret = m.data.generation.chunk;
+            m.data.generationa.generator->generate(m.data.generationa.chunk);
+            m.data.generationa.chunk->gen_inc();
+        }
+}
+
+
+void WorldGenerator::generationb_f(Message &m)
+{
+
+        if(m.data.generationb.chunk)
+        {
+            if(m.data.generationb.genfunc)
+                m.data.generationb.genfunc(
+                    m.data.generationb.chunk,
+                    m.data.generationb.chunkabove,
+                    m.data.generationb.chunkbelow);
+
+            m.data.generationb.chunk->gen_inc();
         }
 }
 

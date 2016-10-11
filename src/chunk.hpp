@@ -24,6 +24,10 @@ public:
 
     Block::ID get(int x, int y, int z);
     void set(int x, int y, int z, Block::ID id);
+    void fill(Block::ID block)
+    {
+        data.fill(block);
+    }
 
     long3_t cpos() {return pos;}
 
@@ -39,6 +43,15 @@ public:
     void unlock_delete() {dont_delete--;}
     bool can_delete() {return dont_delete == 0;}
 
+    /* Level 0: nothing done
+     * Level 1: sent to WorldGenerator
+     * Level 2: WorldGenerator done
+     * Level 3: Sent to WorldGen
+     * Level 4: WorldGen done
+     */
+    int gen_level() {return gen_level_;}
+    void gen_inc() {gen_level_++;}
+
 private:
     long3_t pos;
 
@@ -47,11 +60,13 @@ private:
     int lock_num;
 
     GLBufferRaw mesh;
-    VoxelTree<Block::ID, 2> data;
+    VoxelTree<Block::ID, 4> data;
 
     long num_vertices_;
     bool has_mesh = false;
     int dont_delete = 0;
+
+    int gen_level_ = 0;
 
     static GLuint static_index_elements[2];
     static int side_len;

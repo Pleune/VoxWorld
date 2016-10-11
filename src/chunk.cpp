@@ -7,15 +7,15 @@
 
 GLuint Chunk::static_index_elements[2] = {0,0};
 int Chunk::side_len = 16;
-int Chunk::side_len_p1 = 17;
-int Chunk::side_len_m1 = 15;
+int Chunk::side_len_p1 = side_len +1;
+int Chunk::side_len_m1 = side_len -1;
 
 GLuint Chunk::draw_program;
 GLuint Chunk::draw_uniform_modelmatrix;
 
 Chunk::Chunk(long x, long y, long z)
     :pos({x,y,z}),
-     data(4, 0)
+     data(2, 0)
 {
 }
 

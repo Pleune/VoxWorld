@@ -49,7 +49,6 @@ private:
     void remesh_f(Message &m);
 
     TQueue<Message> queue;
-    bool stop_threads = false;
     int num_threads;
     std::thread **threads;
 };

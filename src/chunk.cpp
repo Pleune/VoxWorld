@@ -15,7 +15,9 @@ GLuint Chunk::draw_uniform_modelmatrix;
 
 Chunk::Chunk(long x, long y, long z)
     :pos({x,y,z}),
-     data(2, 0)
+     lock_num(0),
+     data(2, 0),
+     dont_delete(0)
 {
 }
 
@@ -299,7 +301,7 @@ void Chunk::remesh(Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chun
 void Chunk::force_mesh_upload()
 {
     if(!has_mesh)
-        Logger::stdout.log(Logger::ERROR) << "OOPS";
+        Logger::stdout.log(Logger::ERROR) << "Chunk::force_mesh_upload(): mesh not generated yet!" << Logger::MessageStream::endl;
     mesh.bind(GL_ELEMENT_ARRAY_BUFFER);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }

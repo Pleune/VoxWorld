@@ -12,8 +12,6 @@ WorldGenerator::WorldGenerator(int num_threads)
 
 WorldGenerator::~WorldGenerator()
 {
-    stop_threads = true;
-
     for(int i=0; i<num_threads; i++)
     {
         Message m;
@@ -89,7 +87,8 @@ void WorldGenerator::worker()
     Uint32 time_gena = 0;
     Uint32 time_genb = 0;
     Uint32 time_remesh = 0;
-    while(!stop_threads)
+    bool stop=false;
+    while(!stop)
     {
         Message m;
         queue.pop(m);
@@ -126,14 +125,16 @@ void WorldGenerator::worker()
             time_remesh += SDL_GetTicks() - start_time;
             break;
         case Message::CLOSE_SIG:
+            Logger::stdout.log(Logger::INFO) << "Worker thread close signal recieved" << Logger::MessageStream::endl;
+            stop = true;
             break;
         }
     }
 
     Logger::stdout.log(Logger::INFO) << "Worker thread times:\n"
-                                     << "Time GenerateA: " << time_gena << "\n"
-                                     << "Time GenerateB: " << time_genb << "\n"
-                                     << "Time Remesh:    " << time_remesh << Logger::MessageStream::endl;
+                                     << "\tTime GenerateA: " << time_gena << "\n"
+                                     << "\tTime GenerateB: " << time_genb << "\n"
+                                     << "\tTime Remesh:    " << time_remesh << Logger::MessageStream::endl;
 }
 
 void WorldGenerator::generationa_f(Message &m)

@@ -6,6 +6,7 @@
 #include "block.hpp"
 #include <GL/glew.h>
 #include <mutex>
+#include <atomic>
 #include "custommath.h"
 
 class Chunk {
@@ -42,6 +43,7 @@ public:
     void lock_delete() {dont_delete++;}
     void unlock_delete() {dont_delete--;}
     bool can_delete() {return dont_delete == 0;}
+    int delete_count() {return dont_delete;};
 
     /* Level 0: nothing done
      * Level 1: sent to WorldGenerator
@@ -57,14 +59,14 @@ private:
 
     LockType lock_type;
     std::mutex lock_m;
-    int lock_num;
+    std::atomic<int> lock_num;
 
     GLBufferRaw mesh;
     VoxelTree<Block::ID, 4> data;
 
     long num_vertices_;
     bool has_mesh = false;
-    int dont_delete = 0;
+    std::atomic<int> dont_delete;
 
     int gen_level_ = 0;
 

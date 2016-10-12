@@ -44,7 +44,7 @@ private:
     ChunkMap chunks;
     std::vector<Chunk *> *chunks_for_render = 0;
     std::mutex chunks_for_render_m;
-    WorldGenerator generator;
+    WorldGenerator *generator;
     ChunkGenerator *chunk_generator;
 
     bool stopthreads = false;

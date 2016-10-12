@@ -22,10 +22,13 @@ World::Renderbuff World::renderbuffer;
 
 World::World()
     :chunks(1000, hash_cpos, compare_cpos),
-     generator(4),
      client_tick_lim(10)
 {
     center = {0,0,0};
+    int num_threads = std::thread::hardware_concurrency();
+    generator = new WorldGenerator(num_threads);
+    Logger::stdout.log(Logger::INFO) << "WorldGenerator disbatcher created with "
+                                     << num_threads << " threads." << Logger::MessageStream::endl;
     SDL_GLContext glcon = StateWindow::instance()->create_shared_gl_context();
     client_tick_t = new std::thread(&World::client_tick_func, this, glcon);
     chunk_generator = new ChunkGeneratorPerlin();
@@ -35,10 +38,15 @@ World::~World()
 {
     stopthreads = true;
     client_tick_t->join();
+    chunks_for_render_m.lock();
+    delete generator;
     if(chunks_for_render)
         delete chunks_for_render;
     for(ChunkMap::iterator it = chunks.begin(); it!=chunks.end(); it++)
+    {
+        while(!it->second->can_delete()) SDL_Delay(2);
         delete it->second;
+    }
     delete client_tick_t;
     delete chunk_generator;
 }
@@ -238,7 +246,7 @@ std::list<Chunk *> World::client_tick_maploop(const long3_t &center)
 
                         if(chunkabove && chunkbelow)
                         {
-                            generator.generate(chnk,
+                            generator->generate(chnk,
                                                chunkabove,
                                                chunkbelow,
                                                &WorldGen::normal);
@@ -269,7 +277,7 @@ std::list<Chunk *> World::client_tick_maploop(const long3_t &center)
 
                         if(chunkabove && chunkbelow && chunknorth && chunksouth && chunkeast && chunkwest)
                         {
-                            generator.remesh(chnk,
+                            generator->remesh(chnk,
                                              chunkabove,
                                              chunkbelow,
                                              chunknorth,
@@ -321,7 +329,7 @@ void World::client_tick_regenerate(const long3_t &center)
                 auto pair = chunks.insert({cpos, chnk});
                 if(pair.second)//was inserted
                 {
-                    generator.generate(chnk, chunk_generator);
+                    generator->generate(chnk, chunk_generator);
                     chnk->gen_inc();
                 }
             }
@@ -368,7 +376,6 @@ void World::client_tick_func(SDL_GLContext glcon)
             chunks_for_render_m.unlock();
         }
 
-
         GLenum err = GL_NO_ERROR;
         while((err = glGetError()) != GL_NO_ERROR)
         {
@@ -376,6 +383,17 @@ void World::client_tick_func(SDL_GLContext glcon)
         }
 
         client_tick_lim.delay();
+    }
+
+    for(std::list<Chunk *>::iterator it = chunks_for_delete.begin(); it != chunks_for_delete.end();)
+    {
+        if((*it)->can_delete())
+        {
+            delete (*it);
+            it = chunks_for_delete.erase(it);
+        } else {
+            SDL_Delay(2);
+        }
     }
 
     SDL_GL_DeleteContext(glcon);

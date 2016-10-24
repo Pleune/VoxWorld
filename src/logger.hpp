@@ -11,14 +11,13 @@
 
 class Logger {
 public:
-    enum level {DEBUG=4, INFO=3, WARN=2, ERROR=1, FATAL=0, NONE=99};
-
+    enum level {LOG_DEBUG=4, LOG_INFO=3, LOG_WARN=2, LOG_ERROR=1, LOG_FATAL=0, LOG_NONE=99};
     struct Message {
     public:
         std::string msg;
         std::thread::id thread_id;
         level log_level;
-        level set_print_level = NONE;
+        level set_print_level;
     };
 
     class MessageStream {
@@ -47,7 +46,7 @@ public:
     explicit Logger();
     ~Logger();
 
-	static Logger stdout;
+    static Logger standard;
 
     void set_print_level(level);
 

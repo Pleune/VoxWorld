@@ -160,7 +160,7 @@ void Textbox::redraw()
 
     if(!font_sdl)
     {
-        Logger::stdout.log(Logger::ERROR) << "Unable to load textbox_font: " << file << Logger::MessageStream::endl;
+        Logger::standard.log(Logger::LOG_ERROR) << "Unable to load textbox_font: " << file << Logger::MessageStream::endl;
         //TODO: prevent render() when Textbox is invalid
         return;
     }
@@ -187,10 +187,10 @@ void Textbox::redraw()
     surface = new_surface;
 
     if(w < surface->w)
-        Logger::stdout.log(Logger::WARN) << "Textbox: string \"" << text << "\" wider (by " << surface->w - w << "px) than textbox" << Logger::MessageStream::endl;
+        Logger::standard.log(Logger::LOG_WARN) << "Textbox: string \"" << text << "\" wider (by " << surface->w - w << "px) than textbox" << Logger::MessageStream::endl;
 
     if(h < surface->h)
-        Logger::stdout.log(Logger::WARN) << "Textbox: string \"" << text << "\" taller (by " << surface->h - h << "px) than textbox" << Logger::MessageStream::endl;
+        Logger::standard.log(Logger::LOG_WARN) << "Textbox: string \"" << text << "\" taller (by " << surface->h - h << "px) than textbox" << Logger::MessageStream::endl;
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, surface->w, surface->h,
                  0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, surface->pixels);

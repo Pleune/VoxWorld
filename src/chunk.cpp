@@ -301,7 +301,7 @@ void Chunk::remesh(Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chun
 void Chunk::force_mesh_upload()
 {
     if(!has_mesh)
-        Logger::stdout.log(Logger::ERROR) << "Chunk::force_mesh_upload(): mesh not generated yet!" << Logger::MessageStream::endl;
+        Logger::standard.log(Logger::LOG_ERROR) << "Chunk::force_mesh_upload(): mesh not generated yet!" << Logger::MessageStream::endl;
     mesh.bind(GL_ELEMENT_ARRAY_BUFFER);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }

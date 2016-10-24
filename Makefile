@@ -5,15 +5,15 @@ LFLAGS:=
 LIBS:=
 
 ifeq ($(OS),Windows_NT)
-	CFLAGS:= -Wall -O3 -g $(shell pkg-config --cflags sdl2 SDL2_ttf glew zlib)
+	CFLAGS:= -Wall -O3 --std=c++11 -g $(shell pkg-config --cflags sdl2 SDL2_ttf glew)
 	LFLAGS:= -g
-	LIBS:= $(shell pkg-config --libs sdl2 SDL2_ttf glew zlib) -lopengl32 -lm -mconsole
+	LIBS:= -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf -lglew32 -lopengl32 -lopengl32 -lm -mconsole
 else
 #	UNAME_S := $(shell uname -s)
 #	ifeq ($(UNAME_S),Linux)
-		CFLAGS:= -g -O3 -Wall $(shell pkg-config --cflags sdl2 SDL2_ttf gl glew zlib)
+		CFLAGS:= -g -O3 -Wall $(shell pkg-config --cflags sdl2 SDL2_ttf gl glew)
 		LFLAGS:= -g
-		LIBS:= -lm $(shell pkg-config --libs sdl2 SDL2_ttf gl glew zlib) -pthread
+		LIBS:= -lm $(shell pkg-config --libs sdl2 SDL2_ttf gl glew) -pthread
 #	endif
 #	ifeq ($(UNAME_S),Darwin)
 #	endif
@@ -60,4 +60,4 @@ run:	$(OUTPUTDIR)$(NAME)
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILDDIR)* $(OUTPUTDIR)blocks
+	rm -rf $(BUILDDIR)* $(OUTPUTDIR)$(NAME)

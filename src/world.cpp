@@ -27,7 +27,7 @@ World::World()
     center = {0,0,0};
     int num_threads = std::thread::hardware_concurrency();
     generator = new WorldGenerator(num_threads);
-    Logger::stdout.log(Logger::INFO) << "WorldGenerator disbatcher created with "
+    Logger::standard.log(Logger::LOG_INFO) << "WorldGenerator disbatcher created with "
                                      << num_threads << " threads." << Logger::MessageStream::endl;
     SDL_GLContext glcon = StateWindow::instance()->create_shared_gl_context();
     client_tick_t = new std::thread(&World::client_tick_func, this, glcon);
@@ -126,7 +126,7 @@ void World::init()
     glBufferData(GL_ARRAY_BUFFER, sizeof(mesh) * sizeof(GLfloat), mesh, GL_STATIC_DRAW);
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        Logger::stdout.log(Logger::FATAL) << "Bad world post-process framebuffer" << Logger::MessageStream::endl;
+        Logger::standard.log(Logger::LOG_FATAL) << "Bad world post-process framebuffer" << Logger::MessageStream::endl;
 }
 
 void World::cleanup()
@@ -379,7 +379,7 @@ void World::client_tick_func(SDL_GLContext glcon)
         GLenum err = GL_NO_ERROR;
         while((err = glGetError()) != GL_NO_ERROR)
         {
-            Logger::stdout.log(Logger::ERROR) << "OpenGL Error: " << err << Logger::MessageStream::endl;
+            Logger::standard.log(Logger::LOG_ERROR) << "OpenGL Error: " << err << Logger::MessageStream::endl;
         }
 
         client_tick_lim.delay();

@@ -82,7 +82,7 @@ void WorldGenerator::remesh(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, 
 
 void WorldGenerator::worker()
 {
-    Logger::stdout.set_print_level(Logger::DEBUG);
+    Logger::standard.set_print_level(Logger::LOG_DEBUG);
 
     Uint32 time_gena = 0;
     Uint32 time_genb = 0;
@@ -125,13 +125,13 @@ void WorldGenerator::worker()
             time_remesh += SDL_GetTicks() - start_time;
             break;
         case Message::CLOSE_SIG:
-            Logger::stdout.log(Logger::INFO) << "Worker thread close signal recieved" << Logger::MessageStream::endl;
+            Logger::standard.log(Logger::LOG_INFO) << "Worker thread close signal recieved" << Logger::MessageStream::endl;
             stop = true;
             break;
         }
     }
 
-    Logger::stdout.log(Logger::INFO) << "Worker thread times:\n"
+    Logger::standard.log(Logger::LOG_INFO) << "Worker thread times:\n"
                                      << "\tTime GenerateA: " << time_gena << "\n"
                                      << "\tTime GenerateB: " << time_genb << "\n"
                                      << "\tTime Remesh:    " << time_remesh << Logger::MessageStream::endl;

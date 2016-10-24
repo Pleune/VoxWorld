@@ -1,6 +1,7 @@
 #include "state_test.hpp"
 
 #include <SDL.h>
+#define M_PI 3.1415
 #include "state_window.hpp"
 #include "logger.hpp"
 #include "textbox.hpp"
@@ -9,13 +10,13 @@ StateTest *StateTest::instance_ = NULL;
 StateTest::StateTest()
     :fps_limit(120)
 {
-	Logger::stdout.log(Logger::DEBUG) << "StateTest::StateTest()" << Logger::MessageStream::endl;
+	Logger::standard.log(Logger::LOG_DEBUG) << "StateTest::StateTest()" << Logger::MessageStream::endl;
 }
 
 GameState::Status StateTest::init()
 {
     World::init();
-    Logger::stdout.log(Logger::DEBUG) << "Chunk initaized" << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "Chunk initaized" << Logger::MessageStream::endl;
 
     SDL_Color color = {0,255,0,0};
     text = new Textbox(10, 10, 400, 30, Textbox::ROBOTO_REGULAR, Textbox::MEDIUM, color, "Press ESC to quit.", Textbox::NONE);
@@ -38,7 +39,7 @@ GameState::Status StateTest::init()
 
 void StateTest::cleanup()
 {
-	Logger::stdout.log(Logger::DEBUG) << "StateTest::cleanup()" << Logger::MessageStream::endl;
+	Logger::standard.log(Logger::LOG_DEBUG) << "StateTest::cleanup()" << Logger::MessageStream::endl;
 
     SDL_SetRelativeMouseMode(SDL_FALSE);
 
@@ -46,19 +47,19 @@ void StateTest::cleanup()
     delete world;
 
     World::cleanup();
-    Logger::stdout.log(Logger::DEBUG) << "Chunk de-initaized" << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "Chunk de-initaized" << Logger::MessageStream::endl;
 }
 
 GameState::Status StateTest::resume()
 {
-	Logger::stdout.log(Logger::DEBUG) << "StateTest::resume()" << Logger::MessageStream::endl;
+	Logger::standard.log(Logger::LOG_DEBUG) << "StateTest::resume()" << Logger::MessageStream::endl;
     SDL_SetRelativeMouseMode(SDL_TRUE);
 	return OK;
 }
 
 GameState::Status StateTest::pause()
 {
-	Logger::stdout.log(Logger::DEBUG) << "StateTest::pause()" << Logger::MessageStream::endl;
+	Logger::standard.log(Logger::LOG_DEBUG) << "StateTest::pause()" << Logger::MessageStream::endl;
     SDL_SetRelativeMouseMode(SDL_FALSE);
 	return OK;
 }
@@ -118,7 +119,7 @@ void StateTest::run(GameEngine *engine)
     GLenum err = GL_NO_ERROR;
     while((err = glGetError()) != GL_NO_ERROR)
     {
-        Logger::stdout.log(Logger::ERROR) << "OpenGL Error: " << err << Logger::MessageStream::endl;
+        Logger::standard.log(Logger::LOG_ERROR) << "OpenGL Error: " << err << Logger::MessageStream::endl;
     }
 
     fps_limit.delay();

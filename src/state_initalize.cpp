@@ -16,20 +16,20 @@ StateInitalize::StateInitalize()
 GameState::Status StateInitalize::init()
 {
     std::srand(std::time(0));
-    Logger::stdout.log(Logger::DEBUG) << "rand() seeded from time" << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "rand() seeded from time" << Logger::MessageStream::endl;
     TTF_Init();
-    Logger::stdout.log(Logger::DEBUG) << "SDL_ttf initalized" << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "SDL_ttf initalized" << Logger::MessageStream::endl;
     Textbox::init();
-    Logger::stdout.log(Logger::DEBUG) << "Textbox initaized" << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "Textbox initaized" << Logger::MessageStream::endl;
 	return OK;
 }
 
 void StateInitalize::cleanup()
 {
     TTF_Quit();
-    Logger::stdout.log(Logger::DEBUG) << "SDL_ttf de-initaized" << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "SDL_ttf de-initaized" << Logger::MessageStream::endl;
     Textbox::cleanup();
-    Logger::stdout.log(Logger::DEBUG) << "Textbox de-initaized" << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "Textbox de-initaized" << Logger::MessageStream::endl;
     TTF_Quit();
 }
 

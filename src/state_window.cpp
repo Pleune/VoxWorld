@@ -12,21 +12,21 @@ StateWindow::StateWindow()
 
 GameState::Status StateWindow::init()
 {
-	Logger::stdout.log(Logger::DEBUG) << "GameWindow::GameWindow() creating window w/ gl context" << Logger::MessageStream::endl;
+	Logger::standard.log(Logger::LOG_DEBUG) << "GameWindow::GameWindow() creating window w/ gl context" << Logger::MessageStream::endl;
 
 	if(SDL_Init(SDL_INIT_EVERYTHING))
-        Logger::stdout.log(Logger::ERROR) << "GameWindow::GameWindow(): SDL_Init failed: (" << SDL_GetError() << ')' << Logger::MessageStream::endl;
+        Logger::standard.log(Logger::LOG_ERROR) << "GameWindow::GameWindow(): SDL_Init failed: (" << SDL_GetError() << ')' << Logger::MessageStream::endl;
 
     win = SDL_CreateWindow("VoxWorld", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if(win == NULL)
-        Logger::stdout.log(Logger::ERROR) << "GameWindow::GameWindow(): SDL_CreateWindow failed: (" << SDL_GetError() << ')' << Logger::MessageStream::endl;
+        Logger::standard.log(Logger::LOG_ERROR) << "GameWindow::GameWindow(): SDL_CreateWindow failed: (" << SDL_GetError() << ')' << Logger::MessageStream::endl;
 
     glcontext = SDL_GL_CreateContext(win);
     if(glcontext == NULL)
-        Logger::stdout.log(Logger::ERROR) << "GameWindow::GameWindow(): SDL_GL_CreateContext failed: (" << SDL_GetError() << ')' << Logger::MessageStream::endl;
+        Logger::standard.log(Logger::LOG_ERROR) << "GameWindow::GameWindow(): SDL_GL_CreateContext failed: (" << SDL_GetError() << ')' << Logger::MessageStream::endl;
 
     if(glewInit() != GLEW_OK)
-        Logger::stdout.log(Logger::ERROR) << "GameWindow::GameWindow(): glewInit failed" << Logger::MessageStream::endl;
+        Logger::standard.log(Logger::LOG_ERROR) << "GameWindow::GameWindow(): glewInit failed" << Logger::MessageStream::endl;
 
     SDL_GetWindowSize(win, &windoww, &windowh);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -48,7 +48,7 @@ GameState::Status StateWindow::init()
 
 void StateWindow::cleanup()
 {
-	Logger::stdout.log(Logger::DEBUG) << "GameWindow::cleanup() destroying window" << Logger::MessageStream::endl;
+	Logger::standard.log(Logger::LOG_DEBUG) << "GameWindow::cleanup() destroying window" << Logger::MessageStream::endl;
 
     SDL_GL_DeleteContext(glcontext);
     SDL_DestroyWindow(win);

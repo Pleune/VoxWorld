@@ -2,8 +2,9 @@
 
 #include <iostream>
 #include <iomanip>
+#include <memory>
 
-Logger Logger::stdout;
+Logger Logger::standard;
 
 Logger::MessageStream::~MessageStream()
 {
@@ -22,7 +23,7 @@ Logger::Logger()
     object_thread = std::shared_ptr<std::thread> (new std::thread(&Logger::run, this));
 
     std::shared_ptr<Message> open_message(new Message());
-    open_message->log_level = DEBUG;
+    open_message->log_level = LOG_DEBUG;
     open_message->msg = "Logger starting up...";
     msg_queue->push(open_message);
 }
@@ -31,7 +32,7 @@ Logger::~Logger()
 {
     thread_stop = true;
     std::shared_ptr<Message> close_message(new Message());
-    close_message->log_level = DEBUG;
+    close_message->log_level = LOG_DEBUG;
     close_message->msg = "Logger shutting down...";
     msg_queue->push(close_message);
     object_thread->join();
@@ -59,7 +60,7 @@ void Logger::run()
     while(!thread_stop || !msg_queue->empty())
     {
         msg_queue->pop(msg);
-        if(msg->set_print_level != NONE)
+        if(msg->set_print_level != LOG_NONE)
         {
             log_levels[msg->thread_id] = msg->set_print_level;
             continue;
@@ -89,19 +90,19 @@ std::string Logger::get_prefix(std::shared_ptr<Message> message)
     #ifdef __linux__
     switch(message->log_level)
     {
-    case DEBUG:
+    case LOG_DEBUG:
         prefix << "[\033[34mDEBUG\033[0m]";
         break;
-    case INFO:
+    case LOG_INFO:
         prefix << "[\033[32mINFO \033[0m]";
         break;
-    case WARN:
+    case LOG_WARN:
         prefix << "[\033[33mWARN \033[0m]";
         break;
-    case ERROR:
+    case LOG_ERROR:
         prefix << "[\033[31mERROR\033[0m]";
         break;
-    case FATAL:
+    case LOG_FATAL:
         prefix << "[\033[35mFATAL\033[0m]";
         break;
     default:
@@ -113,19 +114,19 @@ std::string Logger::get_prefix(std::shared_ptr<Message> message)
     #else
     switch(message->log_level)
     {
-    case DEBUG:
+    case LOG_DEBUG:
         prefix << "[DEBUG]";
         break;
-    case INFO:
+    case LOG_INFO:
         prefix << "[INFO ]";
         break;
-    case WARN:
+    case LOG_WARN:
         prefix << "[WARN ]";
         break;
-    case ERROR:
+    case LOG_ERROR:
         prefix << "[ERROR]";
         break;
-    case FATAL:
+    case LOG_FATAL:
         prefix << "[FATAL]";
         break;
     default:
@@ -145,8 +146,8 @@ Logger::level Logger::get_level(std::thread::id thread_id)
     it = log_levels.find(thread_id);
     if(it == log_levels.end())
     {
-        log_levels.insert(std::pair<std::thread::id, level>(thread_id, WARN));
-        return WARN;
+        log_levels.insert(std::pair<std::thread::id, level>(thread_id, LOG_WARN));
+        return LOG_WARN;
     } else {
         return it->second;
     }

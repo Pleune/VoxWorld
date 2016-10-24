@@ -8,13 +8,14 @@
 #include "state_window.hpp"
 #include "textbox.hpp"
 #include "voxeltree.hpp"
+#include <SDL.h>
 
 int
-main()
+main(int argc, char* args[])
 {
-    Logger::stdout.set_print_level(Logger::DEBUG);
+    Logger::standard.set_print_level(Logger::LOG_DEBUG);
 
-    Logger::stdout.log(Logger::DEBUG) << "Creating GameEngine..." << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "Creating GameEngine..." << Logger::MessageStream::endl;
     GameEngine engine(StateWindow::instance());
     engine.loop();
 

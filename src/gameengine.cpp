@@ -6,7 +6,7 @@
 
 GameEngine::GameEngine(GameState *inital_state)
 {
-    Logger::stdout.log(Logger::DEBUG) << "GameEngine::GameEngine(): pushing state \"" << inital_state->getname() << "\" onto stack" << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "GameEngine::GameEngine(): pushing state \"" << inital_state->getname() << "\" onto stack" << Logger::MessageStream::endl;
 
     state_stack.push_back(inital_state);
     current_state = inital_state;
@@ -33,7 +33,7 @@ void GameEngine::queue_change(GameState *state)
 
 void GameEngine::push(GameState *state)
 {
-    Logger::stdout.log(Logger::DEBUG) << "GameEngine::push(): pushing state " << state->getname() << " onto stack" << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "GameEngine::push(): pushing state " << state->getname() << " onto stack" << Logger::MessageStream::endl;
 
 	GameState::Status ret;
 
@@ -60,7 +60,7 @@ void GameEngine::push(GameState *state)
 			return;
 		}
 
-        Logger::stdout.log(Logger::DEBUG) << "GameEngine::push(): resume/init failed! poping failed state "<< current_state->getname() << Logger::MessageStream::endl;
+        Logger::standard.log(Logger::LOG_DEBUG) << "GameEngine::push(): resume/init failed! poping failed state "<< current_state->getname() << Logger::MessageStream::endl;
 		state_stack.pop_back();
 		current_state = state_stack.back();
 		current_state->resume();
@@ -71,7 +71,7 @@ void GameEngine::push(GameState *state)
 
 void GameEngine::pop()
 {
-    Logger::stdout.log(Logger::DEBUG) << "GameEngine::pop(): poping state " << current_state->getname() << " off stack" << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "GameEngine::pop(): poping state " << current_state->getname() << " off stack" << Logger::MessageStream::endl;
 
     if(current_state->instances() > 1)
         current_state->pause();
@@ -89,7 +89,7 @@ void GameEngine::pop()
 
 void GameEngine::change(GameState *state)
 {
-    Logger::stdout.log(Logger::DEBUG) << "GameEngine::change(): changing from state " << current_state->getname() << " to state " << state->getname() <<  Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "GameEngine::change(): changing from state " << current_state->getname() << " to state " << state->getname() <<  Logger::MessageStream::endl;
 	GameState::Status ret = GameState::Status::OK;
 
     if(current_state->instances() > 1)
@@ -195,7 +195,7 @@ void GameEngine::reset(GameState *state)
 {
     cleanup();
 
-    Logger::stdout.log(Logger::DEBUG) << "GameEngine::reset() pushing state \"" << current_state->getname() << "\" onto stack" << Logger::MessageStream::endl;
+    Logger::standard.log(Logger::LOG_DEBUG) << "GameEngine::reset() pushing state \"" << current_state->getname() << "\" onto stack" << Logger::MessageStream::endl;
 
     state_stack.push_back(state);
     current_state = state;

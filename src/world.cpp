@@ -31,7 +31,7 @@ World::World()
                                      << num_threads << " threads." << Logger::MessageStream::endl;
     SDL_GLContext glcon = StateWindow::instance()->create_shared_gl_context();
     client_tick_t = new std::thread(&World::client_tick_func, this, glcon);
-    chunk_generator = new ChunkGeneratorPerlin();
+    chunk_generator = new ChunkGeneratorPerlin2D();
 }
 
 World::~World()
@@ -314,8 +314,8 @@ void World::client_tick_regenerate(const long3_t &center)
 {
     //Search for chunks that need to be generated
     for(int x = -radius + center.x; x<= radius + center.x; x++)
-    for(int y = -radius + center.y; y<= radius + center.y; y++)
     for(int z = -radius + center.z; z<= radius + center.z; z++)
+    for(int y = -radius + center.y; y<= radius + center.y; y++)
     {
         long3_t cpos = {x,y,z};
         long double dist;

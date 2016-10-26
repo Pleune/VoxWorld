@@ -40,7 +40,7 @@ private:
         ChunkMap;
 
     long3_t center = {0,0,0};
-    int radius = 15;
+    int radius = 3;
     ChunkMap chunks;
     std::vector<Chunk *> *chunks_for_render = 0;
     std::mutex chunks_for_render_m;

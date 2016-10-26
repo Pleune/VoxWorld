@@ -6,7 +6,7 @@
 #include "logger.hpp"
 
 GLuint Chunk::static_index_elements[2] = {0,0};
-int Chunk::side_len = 16;
+int Chunk::side_len = 64;
 int Chunk::side_len_p1 = side_len +1;
 int Chunk::side_len_m1 = side_len -1;
 
@@ -16,7 +16,7 @@ GLuint Chunk::draw_uniform_modelmatrix;
 Chunk::Chunk(long x, long y, long z)
     :pos({x,y,z}),
      lock_num(0),
-     data(2, 0),
+     data(3, 0),
      dont_delete(0)
 {
 }

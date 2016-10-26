@@ -64,7 +64,7 @@ private:
     GLBufferRaw mesh;
     VoxelTree<Block::ID, 4> data;
 
-    long num_vertices_;
+    long num_vertices_ = 0;
     bool has_mesh = false;
     std::atomic<int> dont_delete;
 

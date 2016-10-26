@@ -5,18 +5,40 @@
 
 unsigned int Noise::hash(unsigned int x)
 {
-    x = (x << 13) ^ x;
-    return (x * (x * x * 15731 + 789221) + 1376312589);
+	uint32_t tmp = x;
+	tmp = (x+0x7ed55d16) + (tmp<<12);
+	tmp = (x^0xc761c23c) ^ (tmp>>19);
+	tmp = (x+0x165667b1) + (tmp<<5);
+	tmp = (x+0xd3a2646c) ^ (tmp<<9);
+	tmp = (x+0xfd7046c5) + (tmp<<3);
+	tmp = (x^0xb55a4f09) ^ (tmp>>16);
+	return tmp;
 }
 
 unsigned int Noise::hash(unsigned int x, unsigned int y)
 {
-    return (x*73856093) + (y*19349663);
+    x = rotl(x, 7);
+    y = rotl(y, 13);
+
+    x *= 115589;
+    y *= 119723;
+
+    return hash(hash(x) ^ rotr(y,3));
 }
 
 unsigned int Noise::hash(unsigned int x, unsigned int y, unsigned int z)
 {
     return (x*73856093) + (y*19349663) + (z*83492791);
+}
+
+unsigned int Noise::rotl(unsigned int x, unsigned int num)
+{
+    return (x << num) | (x >> (sizeof(x)*8 - num));
+}
+
+unsigned int Noise::rotr(unsigned int x, unsigned int num)
+{
+    return (x >> num) | (x << (sizeof(x)*8 - num));
 }
 
 double Noise::linear_interpolation(double a, double b, double t)
@@ -44,8 +66,12 @@ y |
  \|  \|
   0---1
  */
-double Noise::Perlin::noise(double freq, double x, double y, double z)
+double Noise::Perlin3D::noise(unsigned int seed, double freq, double x, double y, double z)
 {
+    x += seed * 7701409;
+    y += seed * 1684861;
+    z += seed * 9161497;
+
     //freq 1/period
     x *= freq;
     y *= freq;
@@ -63,15 +89,15 @@ double Noise::Perlin::noise(double freq, double x, double y, double z)
     double v = fade(Yf);
     double w = fade(Zf);
 
-    int hashes[8];
-    hashes[0] = hash(X,   Y,   Z  ) & 255; //aaa
-    hashes[1] = hash(X+1, Y,   Z  ) & 255; //baa
-    hashes[2] = hash(X,   Y+1, Z  ) & 255; //aba
-    hashes[3] = hash(X+1, Y+1, Z  ) & 255; //bba
-    hashes[4] = hash(X,   Y,   Z+1) & 255; //aab
-    hashes[5] = hash(X+1, Y,   Z+1) & 255; //bab
-    hashes[6] = hash(X,   Y+1, Z+1) & 255; //abb
-    hashes[7] = hash(X+1, Y+1, Z+1) & 255; //bbb
+    unsigned int hashes[8];
+    hashes[0] = hash(X,   Y,   Z  ); //aaa
+    hashes[1] = hash(X+1, Y,   Z  ); //baa
+    hashes[2] = hash(X,   Y+1, Z  ); //aba
+    hashes[3] = hash(X+1, Y+1, Z  ); //bba
+    hashes[4] = hash(X,   Y,   Z+1); //aab
+    hashes[5] = hash(X+1, Y,   Z+1); //bab
+    hashes[6] = hash(X,   Y+1, Z+1); //abb
+    hashes[7] = hash(X+1, Y+1, Z+1); //bbb
 
     return linear_interpolation(
         linear_interpolation(
@@ -97,8 +123,8 @@ double Noise::Perlin::noise(double freq, double x, double y, double z)
         w);
 }
 
-//Returns the
-double Noise::Perlin::grad(int hash, double x, double y, double z)
+//Returns the dot product of the gradient vector with the direction vector
+double Noise::Perlin3D::grad(unsigned int hash, double x, double y, double z)
 {
     switch(hash & 0xF)
     {
@@ -118,6 +144,80 @@ double Noise::Perlin::grad(int hash, double x, double y, double z)
     case 0xD: return -y + z;
     case 0xE: return  y - x;
     case 0xF: return -y - z;
+    default:  return 0;//never
+    }
+}
+
+/*
+Corners:
+
+y
+|
+|
++---x
+
+2---3
+|   |
+|   |
+0---1
+ */
+double Noise::Perlin2D::noise(unsigned int seed, double freq, double x, double y)
+{
+    //freq 1/period
+    x *= freq;
+    y *= freq;
+
+    int X = floor(x);
+    int Y = floor(y);
+
+    double Xf = x - X;
+    double Yf = y - Y;
+
+    double u = fade(Xf);
+    double v = fade(Yf);
+
+    unsigned int hashes[8];
+    hashes[0] = hash(X,   Y  ); //aaa
+    hashes[1] = hash(X+1, Y  ); //baa
+    hashes[2] = hash(X,   Y+1); //aba
+    hashes[3] = hash(X+1, Y+1); //bba
+
+    return
+        linear_interpolation(
+            linear_interpolation(
+                grad(hashes[0], Xf,   Yf  ), //aaa
+                grad(hashes[1], Xf-1, Yf  ), //baa
+                u),
+            linear_interpolation(
+                grad(hashes[2], Xf,   Yf-1), //aba
+                grad(hashes[3], Xf-1, Yf-1), //bba
+                u),
+            v);
+}
+
+//Returns the dot product of the gradient vector with the direction vector
+double Noise::Perlin2D::grad(unsigned int hash, double x, double y)
+{
+    hash = hash ^ (hash>>4) ^ (hash >> 8);
+    hash &= 0b1111;
+    switch(hash)
+    {
+    case 0x0: return  x;
+    case 0x1: return -x;
+    case 0x2: return  y;
+    case 0x3: return -y;
+    case 0x4: return  x + y;
+    case 0x5: return  x - y;
+    case 0x6: return -x + y;
+    case 0x7: return -x - y;
+    case 0x8: return  1.4*x;
+    case 0x9: return  1.4*y;
+    case 0xA: return -1.4*x;
+    case 0xB: return -1.4*y;
+    case 0xC: return  1.4*x + y;
+    case 0xD: return  1.4*y + x;
+    case 0xE: return -1.4*x - y;
+    case 0xF: return -1.4*y - x;
     default:  return 0;//never
     }
 }

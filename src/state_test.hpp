@@ -41,7 +41,7 @@ private:
 
     Limiter fps_limit;
 
-	static StateTest *instance_;
+    static StateTest *instance_;
 
 };
 

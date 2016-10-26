@@ -15,10 +15,10 @@ StateTest::StateTest()
 GameState::Status StateTest::init()
 {
     World::init();
-    Logger::stdout.log(Logger::DEBUG) << "Chunk initaized" << Logger::MessageStream::endl;
+    Logger::stdout.log(Logger::DEBUG) << "World initaized" << Logger::MessageStream::endl;
 
     SDL_Color color = {0,255,0,0};
-    text = new Textbox(10, 10, 400, 30, Textbox::ROBOTO_REGULAR, Textbox::MEDIUM, color, "Press ESC to quit.", Textbox::NONE);
+    text = new Textbox(10, 10, 400, 50, Textbox::ROBOTO_REGULAR, Textbox::MEDIUM, color, "Press ESC to quit\nPress 'i' to toggle mouse capture", Textbox::NONE);
     world = new World();
     rot = {0,0};
     camera = {
@@ -133,6 +133,15 @@ void StateTest::event(SDL_Event *e)
         case SDLK_ESCAPE:
             queue.exit = true;
             break;
+        case SDLK_i:
+            if(takeinput)
+            {
+                SDL_SetRelativeMouseMode(SDL_FALSE);
+                takeinput = false;
+            } else {
+                SDL_SetRelativeMouseMode(SDL_TRUE);
+                takeinput = true;
+            }
         }
     }
 

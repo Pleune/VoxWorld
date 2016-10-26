@@ -4,6 +4,8 @@
 #include "gamestate.hpp"
 #include "gameengine.hpp"
 
+#include <SDL.h>
+
 class StateWindow : public GameState {
 public:
 	Status init();

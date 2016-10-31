@@ -36,5 +36,6 @@ protected:
 #include "chunkgen_simple.hpp"
 #include "chunkgen_perlin.hpp"
 #include "chunkgen_perlin2d.hpp"
+#include "chunkgen_dsquare.hpp"
 
 #endif

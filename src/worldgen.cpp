@@ -5,6 +5,7 @@
 
 void WorldGen::normal(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow)
 {
+    return;
     int c_len = Chunk::size();
 
     int dirtheight = std::min(4, c_len);

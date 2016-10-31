@@ -56,4 +56,18 @@ mat4_t getrotmatrix(float rx, float ry, float rz);
 mat4_t getprojectionmatrix(float fov, float aspect, float far, float near);
 mat4_t getviewmatrix(vec3_t eye, vec3_t target, vec3_t up);//lookat right-handed
 
+constexpr int ipow(int base, int exp)
+{
+    int result = 1;
+    while (exp)
+    {
+        if (exp & 1)
+            result *= base;
+        exp >>= 1;
+        base *= base;
+    }
+
+    return result;
+}
+
 #endif

@@ -31,7 +31,7 @@ World::World()
                                      << num_threads << " threads." << Logger::MessageStream::endl;
     SDL_GLContext glcon = StateWindow::instance()->create_shared_gl_context();
     client_tick_t = new std::thread(&World::client_tick_func, this, glcon);
-    chunk_generator = new ChunkGeneratorPerlin2D();
+    chunk_generator = new ChunkGeneratorDSquare();
 }
 
 World::~World()

@@ -78,16 +78,46 @@ void ChunkGeneratorHeightmap::generate(Chunk *target)
         if(cpos.y < 0)
             for(int y=c_width-1; y>=0; y--)
             {
-                if(y + cpos.y*c_width >= height)
-                    target->set(x, y, z, Block::AIR);
-                else
-                    break;
+                long Y = y + cpos.y*c_width;
+                if(Y >= height)
+                {
+                    if(Y > 0)
+                        target->set(x, y, z, Block::AIR);
+                    else
+                        target->set(x, y, z, Block::WATER);
+                } else {
+                    if(Y >= height - 1)
+                    {
+                        if(Y < 3)
+                            target->set(x, y, z, Block::SAND);
+                        else
+                            target->set(x, y, z, Block::GRASS);
+                    } else if(Y >= height - 4)
+                    {
+                        if(Y < 3)
+                            target->set(x, y, z, Block::SAND);
+                        else
+                            target->set(x, y, z, Block::DIRT);
+                    } else
+                        break;
+                }
             }
         else
             for(int y=0; y<c_width; y++)
             {
-                if(y + cpos.y*c_width < height)
+                long Y = y + cpos.y*c_width;
+                if(Y < height-4)
                     target->set(x, y, z, Block::STONE);
+                else if(Y < height - 1)
+                    target->set(x, y, z, Block::DIRT);
+                else if(Y < height)
+                {
+                    if(height < 1.55)
+                        target->set(x, y, z, Block::SAND);
+                    else
+                        target->set(x, y, z, Block::GRASS);
+                } else if(Y < 0)
+                    target->set(x, y, z, Block::WATER);
                 else
                     break;
             }

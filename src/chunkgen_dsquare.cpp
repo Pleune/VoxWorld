@@ -4,22 +4,25 @@
 #include "noise.hpp"
 #include "custommath.h"
 
-#define DLEVELS 6
-
 ChunkGeneratorDSquare::ChunkGeneratorDSquare()
 {
     chunk_width = Chunk::size();
     heightmap_width = ipow(2, 7);
+
+    hmap_levels = 0;
+    for(int i=1; i<chunk_width; i*=2)
+        hmap_levels++;
 }
 
 ChunkGeneratorDSquare::~ChunkGeneratorDSquare()
 {
 }
 
-template<int levels>
-ChunkGeneratorDSquare::Heightmap<levels>::Heightmap(int x, int y)
+ChunkGeneratorDSquare::Heightmap::Heightmap(int levels, int x, int y)
+    :levels(levels)
 {
-    constexpr int side_len = ipow(2, levels) + 1;
+    side_len = ipow(2, levels) + 1;
+
     int size = side_len - 1;
     data = new float[side_len*side_len];
 
@@ -71,31 +74,44 @@ ChunkGeneratorDSquare::Heightmap<levels>::Heightmap(int x, int y)
     }
 }
 
-template<int levels>
-float ChunkGeneratorDSquare::Heightmap<levels>::get(int x, int y)
+float ChunkGeneratorDSquare::Heightmap::get(float x, float y)
 {
+    float xf = x*(side_len-2);
+    float yf = y*(side_len-2);
+
+    int xi = xf;
+    int yi = yf;
+
+    float xm = xf - xi;
+    float ym = yf - yi;
+
     return
-        (at(x  , y  ) +
-         at(x+1, y  ) +
-         at(x  , y+1) +
-         at(x+1, y+1))/4.0;
+        (at(xi  , yi  ) +
+         at(xi+1, yi  ) +
+         at(xi  , yi+1) +
+         at(xi+1, yi+1))/4.0;
 }
 
-template<int levels>
-float &ChunkGeneratorDSquare::Heightmap<levels>::at(int x, int y)
+float &ChunkGeneratorDSquare::Heightmap::at(int x, int y)
 {
-    constexpr size_t side_len = ipow(2, levels) + 1;
+    assert(x < side_len);
+    assert(y < side_len);
     return data[x + y*side_len];
 }
 
-template<int levels>
-float ChunkGeneratorDSquare::Heightmap<levels>::seed(int x, int y)
+float ChunkGeneratorDSquare::Heightmap::seed(int x, int y)
 {
     return
-        Noise::Perlin2D::noise(1, .1, x, y) * 300 +
-        Noise::Perlin2D::noise(2, .3, x, y) * 120 +
-        Noise::Perlin2D::noise(3, .4, x, y) * 60 +
+        Noise::Perlin2D::noise(5, .01, x, y) * 1000 +
+        Noise::Perlin2D::noise(1, .1, x, y) * 100 +
+        Noise::Perlin2D::noise(2, .3, x, y) * 80 +
+        Noise::Perlin2D::noise(3, .4, x, y) * 100 +
         Noise::Perlin2D::noise(4, .8, x, y) * 40;
+}
+
+void ChunkGeneratorDSquare::bias(double &h)
+{
+    h = (h*h*h) / (h*h + 300);
 }
 
 void ChunkGeneratorDSquare::generate(Chunk *target)
@@ -103,7 +119,7 @@ void ChunkGeneratorDSquare::generate(Chunk *target)
     target->lock(Chunk::WRITE);
     long3_t cpos = target->cpos();
 
-    Heightmap<DLEVELS> hmap(cpos.x, cpos.z);
+    Heightmap hmap(hmap_levels, cpos.x, cpos.z);
 
     bool invert = false;
     if(cpos.y*chunk_width < hmap.get(0,0))
@@ -115,33 +131,117 @@ void ChunkGeneratorDSquare::generate(Chunk *target)
     for(int x=0; x<chunk_width; x++)
     for(int z=0; z<chunk_width; z++)
     {
-        int height = floor(hmap.get(x, z));
+        double height = hmap.get((float)x/(float)(chunk_width-1), (float)z/(float)(chunk_width-1));
+
+        bias(height);
+
         if(invert)
-        for(int y=chunk_width-1; y>=0; y--)
-        {
-            if(y + cpos.y*chunk_width >= height)
+            for(int y=chunk_width-1; y>=0; y--)
             {
-                target->set(x, y, z, Block::AIR);
-            } else {
-                break;
+                long Y = y + cpos.y*chunk_width;
+                if(Y >= height)
+                {
+                    if(Y >= 0)
+                        target->set(x, y, z, Block::AIR);
+                    else
+                        target->set(x, y, z, Block::WATER);
+                } else {
+                    if(Y >= height - 3)
+                    {
+                        if(Y < 3)
+                            target->set(x, y, z, Block::SAND);
+                        else
+                            target->set(x, y, z, Block::GRASS);
+                    } else if(Y >= height - 7)
+                    {
+                        if(Y < 3)
+                            target->set(x, y, z, Block::SAND);
+                        else
+                            target->set(x, y, z, Block::DIRT);
+                    } else
+                        break;
+                }
             }
-        }
         else
-        for(int y=0; y<chunk_width; y++)
-        {
-            if(y + cpos.y*chunk_width < height)
+            for(int y=0; y<chunk_width; y++)
             {
-                target->set(x, y, z, Block::STONE);
-            } else {
-                break;
+                long Y = y + cpos.y*chunk_width;
+                if(Y < height-7)
+                    target->set(x, y, z, Block::STONE);
+                else if(Y < height - 3)
+                    target->set(x, y, z, Block::DIRT);
+                else if(Y < height)
+                {
+                    if(height < 1.55)
+                        target->set(x, y, z, Block::SAND);
+                    else
+                        target->set(x, y, z, Block::GRASS);
+                } else if(Y < 0)
+                    target->set(x, y, z, Block::WATER);
+                else
+                    break;
             }
-        }
     }
 
     target->unlock();
 }
 
-template float ChunkGeneratorDSquare::Heightmap<DLEVELS>::seed(int x, int y);
-template ChunkGeneratorDSquare::Heightmap<DLEVELS>::Heightmap(int x, int yx);
-template float ChunkGeneratorDSquare::Heightmap<DLEVELS>::get(int x, int y);
-template float &ChunkGeneratorDSquare::Heightmap<DLEVELS>::at(int x, int y);
+bool ChunkGeneratorDSquare::lod(int level, LODMesh *ret, long3_t cpos)
+{
+    if(level > 1)
+        return false;
+
+    GLfloat points[5];
+    points[0] = Heightmap::seed(cpos.x  , cpos.z  );
+    points[1] = Heightmap::seed(cpos.x+1, cpos.z  );
+    points[2] = Heightmap::seed(cpos.x+1, cpos.z+1);
+    points[3] = Heightmap::seed(cpos.x  , cpos.z+1);
+    points[4] = (points[0]+points[1]+points[2]+points[3])/4.0;
+
+    for(int i=0; ; i++)
+    {
+        if(i == 5)
+            return false;
+
+        if(points[i] > cpos.y*chunk_width &&
+           points[i] < (cpos.y+1)*chunk_width)
+            break;
+    }
+
+    GLfloat x = (cpos.x)*chunk_width;
+    GLfloat X = (cpos.x+1)*chunk_width;
+    GLfloat z = (cpos.z)*chunk_width;
+    GLfloat Z = (cpos.z+1)*chunk_width;
+    GLfloat x_mid = (x + X)/2;
+    GLfloat z_mid = (z + Z)/2;
+
+    /*
+      +z
+      3---2
+      | 4 |
+      0---1 +x
+    */
+    LODMesh mesh = {
+        {
+            X    , points[1], z    , .05, .27, .1,
+            x    , points[0], z    , .05, .27, .1,
+            x_mid, points[4], z_mid, .05, .27, .1,
+
+            X    , points[2], Z    , .05, .27, .1,
+            X    , points[1], z    , .05, .27, .1,
+            x_mid, points[4], z_mid, .05, .27, .1,
+
+            x    , points[3], Z    , .05, .27, .1,
+            X    , points[2], Z    , .05, .27, .1,
+            x_mid, points[4], z_mid, .05, .27, .1,
+
+            x    , points[0], z    , .05, .27, .1,
+            x    , points[3], Z    , .05, .27, .1,
+            x_mid, points[4], z_mid, .05, .27, .1,
+        }
+    };
+
+    *ret = mesh;
+
+    return true;
+}

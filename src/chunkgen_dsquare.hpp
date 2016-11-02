@@ -11,22 +11,27 @@ public:
 
     void generate(Chunk *);
 
+    bool lod(int level, LODMesh *ret, long3_t cpos);
+    int lod_max() {return 1;};
+
 private:
-    template<int levels>
     class Heightmap {
     public:
-        Heightmap(int x, int y);
-        float get(int x, int y);
+        Heightmap(int levels, int x, int y);
+        float get(float x, float y);
+        static float seed(int x, int y);
 
     private:
         float &at(int x, int y);
-        float seed(int x, int y);
 
-        int pound_level = 0;
-        int level = 0;
+        int levels;
+        int side_len;
         float *data;
     };
 
+    void bias(double &h);
+
+    int hmap_levels;
     int chunk_width;
     int heightmap_width;
 };

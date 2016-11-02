@@ -40,10 +40,13 @@ private:
         ChunkMap;
 
     long3_t center = {0,0,0};
-    int radius = 7;
+    int radius = 15;
+    int radius_lod = 35;
     ChunkMap chunks;
     std::vector<Chunk *> *chunks_for_render = 0;
     std::mutex chunks_for_render_m;
+    GLBufferRaw lod_mesh;
+    int lod_points = 0;
     WorldGenerator *generator;
     ChunkGenerator *chunk_generator;
 
@@ -58,6 +61,7 @@ private:
 
     static GLuint pre_program;
     static GLuint pre_uniform_viewprojectionmatrix;
+    static GLuint pre_uniform_modelmatrix;
     static GLuint post_program;
 	static GLuint post_uniform_tex;
 	static GLuint post_uniform_depth;

@@ -2,11 +2,18 @@
 #define BLOCKS_CHUNKGEN_H
 
 #include "chunk.hpp"
+#include "glbufferraw.hpp"
 
 class ChunkGenerator {
 public:
+    struct LODMesh {
+        GLfloat verticies[72];
+    };
+
     virtual void generate(Chunk *) = 0;
-    virtual ~ChunkGenerator() {}
+    virtual bool lod(int level, LODMesh *ret, long3_t cpos) {return false;};
+    virtual int lod_max() {return 0;};
+    virtual ~ChunkGenerator() {};
 };
 
 class ChunkGeneratorHeightmap : public ChunkGenerator {

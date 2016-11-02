@@ -11,6 +11,7 @@
 
 GLuint World::pre_program;
 GLuint World::pre_uniform_viewprojectionmatrix;
+GLuint World::pre_uniform_modelmatrix;
 
 GLuint World::post_program;
 GLuint World::post_uniform_tex;
@@ -65,6 +66,7 @@ void World::init()
     Chunk::init(pre_program);
 
 	pre_uniform_viewprojectionmatrix = glGetUniformLocation(pre_program, "VP");
+    pre_uniform_modelmatrix = glGetUniformLocation(pre_program, "MODEL");
 	post_uniform_tex = glGetUniformLocation(post_program, "tex");
 	post_uniform_depth = glGetUniformLocation(post_program, "depth");
 	post_uniform_window_size = glGetUniformLocation(post_program, "window_size");
@@ -155,7 +157,7 @@ void World::render(Camera camera)
     glEnable(GL_DEPTH_TEST);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    mat4_t projection = getprojectionmatrix(90, (float)windoww / (float)windowh, 3000, .1);
+    mat4_t projection = getprojectionmatrix(90, (float)windoww / (float)windowh, 30000, .1);
 
     static const vec3_t zero = {0, 0, 0};
     mat4_t view = getviewmatrix(zero, camera.forward, camera.up);
@@ -165,6 +167,32 @@ void World::render(Camera camera)
     glUniformMatrix4fv(pre_uniform_viewprojectionmatrix, 1, GL_FALSE, vp.mat);
 
     chunks_for_render_m.lock();
+    if(lod_points > 0)
+    {
+        vec3_t wpos = {0,0,0};
+        mat4_t matrix = gettranslatematrix(wpos.x - camera.pos.x, wpos.y - camera.pos.y, wpos.z - camera.pos.z);
+        glUniformMatrix4fv(pre_uniform_modelmatrix, 1, GL_FALSE, matrix.mat);
+
+        lod_mesh.bind(GL_ARRAY_BUFFER);
+
+        glVertexAttribPointer(
+                0,
+                3,
+                GL_FLOAT,
+                GL_FALSE,
+                6*sizeof(GLfloat),
+                0);
+
+        glVertexAttribPointer(
+                1,
+                3,
+                GL_FLOAT,
+                GL_FALSE,
+                6*sizeof(GLfloat),
+                reinterpret_cast<void *>(3*sizeof(GLfloat)));
+        glDrawArrays(GL_TRIANGLES, 0, lod_points);
+    }
+
     if(chunks_for_render)
     {
         for(std::vector<Chunk *>::iterator it = chunks_for_render->begin(); it != chunks_for_render->end(); it++)
@@ -191,6 +219,8 @@ void World::render(Camera camera)
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, renderbuffer.depthbuffer);
 
+    glEnableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
@@ -226,6 +256,9 @@ std::list<Chunk *> World::client_tick_maploop(const long3_t &center)
         {
             if(dist > radius)
             {
+                static int i = 0;
+                i++;
+                Logger::stdout.log(Logger::ERROR) << "(" << i << ") AGAIN" << Logger::MessageStream::endl;
                 chunks_for_delete.push_back(chnk);
                 it = chunks.erase(it);
             } else {
@@ -312,16 +345,22 @@ std::list<Chunk *> World::client_tick_maploop(const long3_t &center)
 
 void World::client_tick_regenerate(const long3_t &center)
 {
+    std::vector<GLfloat> lod_verticies;
+
     //Search for chunks that need to be generated
-    for(int x = -radius + center.x; x<= radius + center.x; x++)
-    for(int z = -radius + center.z; z<= radius + center.z; z++)
-    for(int y = -radius + center.y; y<= radius + center.y; y++)
+    for(int x = -radius_lod + center.x; x<= radius_lod + center.x; x++)
+    for(int z = -radius_lod + center.z; z<= radius_lod + center.z; z++)
+    for(int y = -radius_lod + center.y; y<= radius_lod + center.y; y++)
     {
         long3_t cpos = {x,y,z};
         long double dist;
         distlong3(&dist, &cpos, &center);
         if(dist < radius)
         {
+            //Logger::stdout.log(Logger::ERROR) << "Dist: " << dist <<
+            //" world radius: " << radius << "\tNORMAL" <<
+            //Logger::MessageStream::endl;
+
             ChunkMap::iterator it = chunks.find(cpos);
             if(it == chunks.end())
             {
@@ -334,7 +373,25 @@ void World::client_tick_regenerate(const long3_t &center)
                 }
             }
         }
+        if(dist > radius-1 && dist < radius_lod)
+        {
+            //Logger::stdout.log(Logger::ERROR) << "Dist: " << dist << " world radius: " << radius << "\tLOD" << Logger::MessageStream::endl;
+
+            //add to lod
+            ChunkGenerator::LODMesh mesh;
+            if(chunk_generator->lod(1, &mesh, cpos))
+            {
+                for(int i=0; i<72; i++)
+                    lod_verticies.push_back(mesh.verticies[i]);
+            }
+        }
     }
+
+    chunks_for_render_m.lock();
+    int points = lod_verticies.size()/6;
+    lod_mesh.set(lod_verticies.data(), points*6*sizeof(GLfloat), GL_STATIC_DRAW);
+    lod_points = points;
+    chunks_for_render_m.unlock();
 }
 
 void World::client_tick_func(SDL_GLContext glcon)

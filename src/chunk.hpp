@@ -62,7 +62,7 @@ private:
     std::atomic<int> lock_num;
 
     GLBufferRaw mesh;
-    VoxelTree<Block::ID, 4> data;
+    VoxelTree<Block::ID, 5> data;
 
     long num_vertices_ = 0;
     bool has_mesh = false;

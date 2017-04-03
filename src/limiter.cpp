@@ -1,7 +1,7 @@
 #include "limiter.hpp"
 
 Limiter::Limiter(int cps)
-    :cps(cps)
+    :cps(cps), count_last(0)
 {
     mark();
 }
@@ -18,6 +18,14 @@ void Limiter::delay()
     Uint32 next_ms = last_sec + (1000.0*last_delay/(double)cps);
     Uint32 this_ms = SDL_GetTicks();
 
+    count++;
+    if(count_time +1000 < this_ms)
+    {
+        count_last = count;
+        count = 0;
+        count_time += 1000;
+    }
+
     if(last_delay == cps)
     {
         last_sec = this_ms;
@@ -28,8 +36,23 @@ void Limiter::delay()
         SDL_Delay(next_ms - this_ms);
 }
 
+void Limiter::nodelay()
+{
+    Uint32 this_ms = SDL_GetTicks();
+
+    count++;
+    if(count_time +1000 < this_ms)
+    {
+        count_last = count;
+        count = 0;
+        count_time += 1000;
+    }
+}
+
 void Limiter::mark()
 {
     last_sec = SDL_GetTicks();
     last_delay = 0;
+    count_time = last_sec;
+    count = 0;
 }

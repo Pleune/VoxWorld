@@ -15,7 +15,7 @@ public:
 	Status resume();
 	Status pause();
 
-    void input();
+    void input(uint32_t dt);
 
 	void run(GameEngine *);
 	void event(SDL_Event *e);
@@ -36,10 +36,12 @@ private:
     struct {float x,y;} rot;
 
     Textbox *text;
+    Textbox *fps;
     World *world;
     const Uint8 *keyboard;
 
     Limiter fps_limit;
+    uint32_t tick;
 
     static StateTest *instance_;
 

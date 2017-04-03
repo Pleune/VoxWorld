@@ -167,11 +167,15 @@ void World::render(Camera camera)
     glUniformMatrix4fv(pre_uniform_viewprojectionmatrix, 1, GL_FALSE, vp.mat);
 
     chunks_for_render_m.lock();
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
     if(chunks_for_render)
     {
         for(std::vector<Chunk *>::iterator it = chunks_for_render->begin(); it != chunks_for_render->end(); it++)
             (*it)->render(camera.pos);
     }
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
     chunks_for_render_m.unlock();
 
     //render to screen

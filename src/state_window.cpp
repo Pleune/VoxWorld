@@ -30,8 +30,8 @@ GameState::Status StateWindow::init()
 
     SDL_GetWindowSize(win, &windoww, &windowh);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    if(SDL_GL_SetSwapInterval(-1) == -1)
-        if(SDL_GL_SetSwapInterval(1) == -1)
+    //if(SDL_GL_SetSwapInterval(-1) == -1)
+    //    if(SDL_GL_SetSwapInterval(1) == -1)
             SDL_GL_SetSwapInterval(0);
 
     glClearColor(0,0,0,1);

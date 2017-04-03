@@ -4,6 +4,7 @@
 #include <string>
 #include <SDL.h>
 #include <GL/glew.h>
+#include <SDL_ttf.h>
 
 class Textbox {
 public:
@@ -62,13 +63,21 @@ public:
     void render();
 
 private:
-    const static TTFInfo ttf_info[];
+    static TTFInfo ttf_info[];
     const static int size_lookup[];
 
     void redraw();
 
     int x, y;
     int w, h;
+
+    int surf_w, surf_h;
+
+    struct {
+        GLfloat x;
+        GLfloat y;
+    } offset;
+
     Font font;
     Size size;
     SDL_Color color;
@@ -81,6 +90,7 @@ private:
     static GLuint uniform_texture;
     static GLuint uniform_window_size;
     static GLuint uniform_offset;
+    static GLuint uniform_size;
     static GLuint attribute_pos;
     static GLuint attribute_texcoord_vert;
     static GLuint vertices_buf;

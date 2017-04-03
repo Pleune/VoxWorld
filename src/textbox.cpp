@@ -1,13 +1,12 @@
 #include "textbox.hpp"
 
 #include <SDL.h>
-#include <SDL_ttf.h>
 
 #include "state_window.hpp"
 #include "logger.hpp"
 #include "gl.h"
 
-const Textbox::TTFInfo Textbox::ttf_info[] = {
+Textbox::TTFInfo Textbox::ttf_info[] = {
     [Textbox::ROBOTO_REGULAR] = {
         "Roboto-Regular",
         "resources/fonts/Roboto/Roboto-Regular.ttf"},
@@ -76,6 +75,7 @@ GLuint Textbox::glprogram = 0;
 GLuint Textbox::uniform_texture = 0;
 GLuint Textbox::uniform_window_size = 0;
 GLuint Textbox::uniform_offset = 0;
+GLuint Textbox::uniform_size = 0;
 GLuint Textbox::attribute_pos = 0;
 GLuint Textbox::attribute_texcoord_vert = 0;
 GLuint Textbox::vertices_buf = 0;
@@ -85,14 +85,14 @@ char *Textbox::base_path = 0;
 const char *Textbox::shader_vertex = "\
 #version 100\n\
 precision mediump float;\n\
-attribute vec2 pos;\n\
 attribute vec2 texcoord_vert;\n\
 varying vec2 texcoord_frag;\n\
 uniform vec2 window_size;\n\
 uniform vec2 offset;\n\
+uniform vec2 size;\n\
 void main() {\n\
 	texcoord_frag = texcoord_vert;\n\
-    vec2 p = (pos + offset)/window_size;\n\
+    vec2 p = (size*texcoord_vert + offset)/window_size;\n\
     p.y = 1.0 - p.y;\n\
     p = p * vec2(2.0,2.0) - vec2(1.0,1.0);\n\
 	gl_Position = vec4(p, 0.0, 1.0);\n\
@@ -116,11 +116,25 @@ Textbox::Status Textbox::init()
     uniform_texture = glGetUniformLocation(glprogram, "texture");
     uniform_window_size = glGetUniformLocation(glprogram, "window_size");
     uniform_offset = glGetUniformLocation(glprogram, "offset");
+    uniform_size = glGetUniformLocation(glprogram, "size");
     attribute_pos = glGetAttribLocation(glprogram, "pos");
     attribute_texcoord_vert = glGetAttribLocation(glprogram, "texcoord_vert");
     glGenBuffers(1, &vertices_buf);
 
     base_path = SDL_GetBasePath();
+
+    GLfloat vertices_data[] = {
+        0, 0,
+        0, 1,
+        1, 0,
+
+        1, 1,
+        1, 0,
+        0, 1
+    };
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertices_buf);
+    glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), vertices_data, GL_STATIC_DRAW);
 
     return OK;
 }
@@ -156,7 +170,6 @@ void Textbox::redraw()
     strncat(file, ttf_info[font].path, 1024 - strlen(file));
 
     TTF_Font *font_sdl = TTF_OpenFont(file, size_lookup[size]);
-    free(file);
 
     if(!font_sdl)
     {
@@ -164,6 +177,8 @@ void Textbox::redraw()
         //TODO: prevent render() when Textbox is invalid
         return;
     }
+
+    free(file);
 
     SDL_Surface *surface = TTF_RenderText_Blended_Wrapped(font_sdl, text.c_str(), color, w);
 
@@ -195,31 +210,17 @@ void Textbox::redraw()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, surface->w, surface->h,
                  0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, surface->pixels);
 
-    struct {
-        GLfloat x;
-        GLfloat y;
-    } offset = { 0, 0 };
-
     if(flags & CENTER_TEXT_H)
         offset.x = (w - surface->w) / 2.0f;
 
     if(flags & CENTER_TEXT_V)
         offset.y = (h - surface->h) / 2.0f;
 
-    GLfloat vertices_data[] = {
-        offset.x, offset.y, 0, 0,
-        offset.x, offset.y + surface->h, 0, 1,
-        offset.x + surface->w, offset.y, 1, 0,
-
-        offset.x + surface->w, offset.y + surface->h, 1, 1,
-        offset.x + surface->w, offset.y, 1, 0,
-        offset.x, offset.y + surface->h, 0, 1
-    };
-
-    glBindBuffer(GL_ARRAY_BUFFER, vertices_buf);
-    glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(GLfloat), vertices_data, GL_STATIC_DRAW);
+    surf_w = surface->w;
+    surf_h = surface->h;
 
     SDL_FreeSurface(surface);
+
     TTF_CloseFont(font_sdl);
 }
 
@@ -236,17 +237,19 @@ void Textbox::render()
 
     GLfloat vec[2] = {(float)window_w, (float)window_h};
     glUniform2fv(uniform_window_size, 1, vec);
-    vec[0] = x;
-    vec[1] = y;
+    vec[0] = x + offset.x;
+    vec[1] = y + offset.y;
     glUniform2fv(uniform_offset, 1, vec);
+    vec[0] = surf_w;
+    vec[1] = surf_h;
+    glUniform2fv(uniform_size, 1, vec);
 
     glBindBuffer(GL_ARRAY_BUFFER, vertices_buf);
-    glVertexAttribPointer(attribute_pos, 2, GL_FLOAT, GL_FALSE,4 * sizeof(GLfloat), 0);
-    glVertexAttribPointer(attribute_texcoord_vert, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void *)(2 * sizeof(GLfloat)));
+    glVertexAttribPointer(attribute_texcoord_vert, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glEnableVertexAttribArray(attribute_pos);
     glEnableVertexAttribArray(attribute_texcoord_vert);
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDisableVertexAttribArray(attribute_texcoord_vert);
 }

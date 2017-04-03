@@ -19,6 +19,8 @@ GameState::Status StateTest::init()
 
     SDL_Color color = {0,255,0,0};
     text = new Textbox(10, 10, 400, 50, Textbox::ROBOTO_REGULAR, Textbox::MEDIUM, color, "Press ESC to quit\nPress 'i' to toggle mouse capture", Textbox::NONE);
+    color = {150, 0, 0, 0};
+    fps = new Textbox(10, 60, 100, 60, Textbox::ROBOTO_REGULAR, Textbox::MEDIUM, color, "_", Textbox::NONE);
     world = new World();
     rot = {0,0};
     camera = {
@@ -32,6 +34,7 @@ GameState::Status StateTest::init()
     keyboard = SDL_GetKeyboardState(0);
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
+    tick = 0;
 
 	return OK;
 }
@@ -43,6 +46,7 @@ void StateTest::cleanup()
     SDL_SetRelativeMouseMode(SDL_FALSE);
 
     delete text;
+    delete fps;
     delete world;
 
     World::cleanup();
@@ -53,6 +57,7 @@ GameState::Status StateTest::resume()
 {
 	Logger::stdout.log(Logger::DEBUG) << "StateTest::resume()" << Logger::MessageStream::endl;
     SDL_SetRelativeMouseMode(SDL_TRUE);
+    tick = 0;
 	return OK;
 }
 
@@ -63,7 +68,7 @@ GameState::Status StateTest::pause()
 	return OK;
 }
 
-void StateTest::input()
+void StateTest::input(uint32_t dt)
 {
     vec3_t inputvec = {0,0,0};
 
@@ -89,10 +94,10 @@ void StateTest::input()
     rotatevec.z = std::sin(rot.x)*inputvec.x + std::cos(rot.x)*inputvec.z;
     rotatevec.y = inputvec.y;
 
-    #define PLAYER_SPEED 1
-    rotatevec.x *= PLAYER_SPEED;
-    rotatevec.y *= PLAYER_SPEED;
-    rotatevec.z *= PLAYER_SPEED;
+    #define PLAYER_SPEED 0.1
+    rotatevec.x *= PLAYER_SPEED * dt;
+    rotatevec.y *= PLAYER_SPEED * dt;
+    rotatevec.z *= PLAYER_SPEED * dt;
 
     camera.pos.x += rotatevec.x;
     camera.pos.y += rotatevec.y;
@@ -105,16 +110,24 @@ void StateTest::input()
                     world->blockpick_set(Block::AIR, camera.pos, {x, y, z}, false, 40, false);
 
     if(keyboard[SDL_SCANCODE_E])
-        for(int i=0; i<10; i++)
-            world->blockpick_set(Block::SAND, camera.pos, camera.forward, true, 200, false);
+        world->blockpick_set(Block::SAND, camera.pos, camera.forward, true, 2000, false);
+    if(keyboard[SDL_SCANCODE_R])
+        world->blockpick_set(Block::AIR, camera.pos, camera.forward, false, 2000, false);
 }
 
 void StateTest::run(GameEngine *engine)
 {
+    uint32_t new_tick = SDL_GetTicks();
+    uint32_t dt = tick ? new_tick - tick : 0;
+    tick = new_tick;
+
+    if(dt != 0)
+        fps->set_text(std::to_string(fps_limit.speed()));
+
     if(queue.exit)
         engine->finish();
 
-    input();
+    input(dt);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -122,6 +135,7 @@ void StateTest::run(GameEngine *engine)
 
     world->render(camera);
     text->render();
+    fps->render();
 
     StateWindow::instance()->swap();
 
@@ -131,7 +145,7 @@ void StateTest::run(GameEngine *engine)
         Logger::stdout.log(Logger::ERROR) << "OpenGL Error: " << err << Logger::MessageStream::endl;
     }
 
-    fps_limit.delay();
+    fps_limit.nodelay();
 }
 
 void StateTest::event(SDL_Event *e)

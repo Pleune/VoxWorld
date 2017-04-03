@@ -17,12 +17,17 @@ public:
     void set_cps(int cps);
 
     void delay();      //delay until the next limit
+    void nodelay();
     void mark();       //reset the seccond
+    int speed() {return count_last;}
 
 private:
     int last_delay;    //cycle number (0 to cps-1)
     Uint32 last_sec;   //tick of last full seccond
     int cps;           //target cycles per second
+    int count;
+    int count_last;
+    uint32_t count_time;
 };
 
 #endif

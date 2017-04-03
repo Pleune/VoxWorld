@@ -2,7 +2,7 @@
 
 void ChunkGeneratorRandom::generate(Chunk *target)
 {
-    target->lock(Chunk::WRITE);
+    target->lock(RWLock::WRITE);
     int c_width = Chunk::size();
 
     int num_places = c_width * c_width;
@@ -19,7 +19,7 @@ void ChunkGeneratorRandom::generate(Chunk *target)
 
 void ChunkGeneratorFlat::generate(Chunk *target)
 {
-    target->lock(Chunk::WRITE);
+    target->lock(RWLock::WRITE);
     int c_width = Chunk::size();
 
     for(int x=0; x<c_width; x++)
@@ -40,7 +40,7 @@ void ChunkGeneratorFlat::generate(Chunk *target)
 
 void ChunkGeneratorCrapHills::generate(Chunk *target)
 {
-    target->lock(Chunk::WRITE);
+    target->lock(RWLock::WRITE);
     int c_width = Chunk::size();
 
     for(int x=0; x<c_width; x++)

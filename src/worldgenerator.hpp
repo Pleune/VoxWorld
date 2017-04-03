@@ -14,7 +14,7 @@ public:
 
     void generate(Chunk *chunk, ChunkGenerator *);
     void generate(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, WorldGen::GenFunc genfunc);
-    void remesh(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chunk *chunksouth, Chunk *chunkeast, Chunk *chunkwest);
+    void remesh(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chunk *chunksouth, Chunk *chunkeast, Chunk *chunkwest, bool instant);
 
 private:
     struct Message {

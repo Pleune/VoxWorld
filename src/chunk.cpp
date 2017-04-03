@@ -7,7 +7,7 @@
 #include "logger.hpp"
 
 GLuint Chunk::static_index_elements[2] = {0,0};
-int Chunk::side_len = 64;
+int Chunk::side_len = 16;
 int Chunk::side_len_p1 = side_len +1;
 int Chunk::side_len_m1 = side_len -1;
 
@@ -16,8 +16,7 @@ GLuint Chunk::draw_uniform_modelmatrix;
 
 Chunk::Chunk(long x, long y, long z)
     :pos({x,y,z}),
-     lock_num(0),
-     data(3, 0),
+     data(2, 0),
      dont_delete(0)
 {
 }
@@ -126,7 +125,7 @@ void Chunk::remesh(Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chun
 
     if(chunkabove)
     {
-        chunkabove->lock(READ);
+        chunkabove->lock(RWLock::READ);
         for(int x=0; x<side_len; x++)
         for(int z=0; z<side_len; z++)
             above_b[x + side_len*z] = chunkabove->get(x, 0, z);
@@ -137,7 +136,7 @@ void Chunk::remesh(Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chun
 
     if(chunkbelow)
     {
-        chunkbelow->lock(READ);
+        chunkbelow->lock(RWLock::READ);
         for(int x=0; x<side_len; x++)
         for(int z=0; z<side_len; z++)
             below_b[x + side_len*z] = chunkbelow->get(x, side_len_m1, z);
@@ -148,7 +147,7 @@ void Chunk::remesh(Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chun
 
     if(chunknorth)
     {
-        chunknorth->lock(READ);
+        chunknorth->lock(RWLock::READ);
         for(int x=0; x<side_len; x++)
         for(int y=0; y<side_len; y++)
             north_b[x + side_len*y] = chunknorth->get(x, y, side_len_m1);
@@ -159,7 +158,7 @@ void Chunk::remesh(Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chun
 
     if(chunksouth)
     {
-        chunksouth->lock(READ);
+        chunksouth->lock(RWLock::READ);
         for(int x=0; x<side_len; x++)
         for(int y=0; y<side_len; y++)
             south_b[x + side_len*y] = chunksouth->get(x, y, 0);
@@ -170,7 +169,7 @@ void Chunk::remesh(Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chun
 
     if(chunkeast)
     {
-        chunkeast->lock(READ);
+        chunkeast->lock(RWLock::READ);
         for(int y=0; y<side_len; y++)
         for(int z=0; z<side_len; z++)
             east_b[y + side_len*z] = chunkeast->get(0, y, z);
@@ -181,7 +180,7 @@ void Chunk::remesh(Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chun
 
     if(chunkwest)
     {
-        chunkwest->lock(READ);
+        chunkwest->lock(RWLock::READ);
         for(int y=0; y<side_len; y++)
         for(int z=0; z<side_len; z++)
             west_b[y + side_len*z] = chunkwest->get(side_len_m1, y, z);
@@ -315,38 +314,10 @@ Block::ID Chunk::get(int x, int y, int z)
 void Chunk::set(int x, int y, int z, Block::ID id)
 {
     data.set(x, y, z, id);
-}
-
-void Chunk::lock(LockType type)
-{
-    if(type == WRITE)
-    {
-        lock_m.lock();
-        lock_type = WRITE;
-    } else {
-        if(lock_type == WRITE)
-        {
-            lock_m.lock();
-            lock_type = READ;
-            lock_num = 1;
-        } else {
-            if(lock_num == 0)
-                lock_m.lock();
-            lock_num++;
-        }
-    }
-}
-
-void Chunk::unlock()
-{
-    if(lock_type == WRITE)
-    {
-        lock_m.unlock();
-    } else {
-        lock_num--;
-        if(lock_num == 0)
-            lock_m.unlock();
-    }
+    //TODO: only if changed
+    //mesh_current = false;
+    if(gen_level_ > 4)
+        gen_level_ = 4;
 }
 
 Chunk::Status Chunk::init(GLuint draw_program)

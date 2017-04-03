@@ -8,13 +8,16 @@
 #include <mutex>
 #include <atomic>
 #include "custommath.h"
+#include "rwlock.hpp"
 
 class Chunk {
 public:
     enum Status {OK, FAIL};
-    enum LockType {READ, WRITE};
 
     Chunk(long x, long y, long z);
+
+    void lock(RWLock::LockType lt) {rwlock.lock(lt);}
+    void unlock() {rwlock.unlock();}
 
     void render(vec3_t camera_pos);
     long num_vertices();
@@ -31,9 +34,6 @@ public:
     }
 
     long3_t cpos() {return pos;}
-
-    void lock(LockType);
-    void unlock();
 
     static Status init(GLuint draw_program);
     static void cleanup();
@@ -55,11 +55,9 @@ public:
     void gen_inc() {gen_level_++;}
 
 private:
-    long3_t pos;
+    RWLock rwlock;
 
-    LockType lock_type;
-    std::mutex lock_m;
-    std::atomic<int> lock_num;
+    long3_t pos;
 
     GLBufferRaw mesh;
     VoxelTree<Block::ID, 4> data;

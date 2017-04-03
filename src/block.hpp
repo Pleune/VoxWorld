@@ -12,7 +12,8 @@ namespace Block {
         GRASS,
         DIRT,
         WATER,
-        SAND
+        SAND,
+        ERR
     };
 
     struct Properties {

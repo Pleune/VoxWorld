@@ -11,14 +11,14 @@ void WorldGen::normal(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow)
 
     Block::ID blocks_above[c_len][dirtheight+1][c_len];
 
-    chunkabove->lock(Chunk::READ);
+    chunkabove->lock(RWLock::READ);
     for(int x=0; x<c_len; x++)
     for(int y=0; y<=dirtheight; y++)
     for(int z=0; z<c_len; z++)
         blocks_above[x][y][z] = chunkabove->get(x, y, z);
     chunkabove->unlock();
 
-    chunk->lock(Chunk::WRITE);
+    chunk->lock(RWLock::WRITE);
     for(int x=0; x<c_len; x++)
     for(int z=0; z<c_len; z++)
     {

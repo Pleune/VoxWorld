@@ -14,7 +14,7 @@ ChunkGeneratorPerlin::~ChunkGeneratorPerlin()
 
 void ChunkGeneratorPerlin::generate(Chunk *target)
 {
-    target->lock(Chunk::WRITE);
+    target->lock(RWLock::WRITE);
 
     long3_t cpos = target->cpos();
 

@@ -53,7 +53,7 @@ void WorldGenerator::generate(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow
     queue.push(m);
 }
 
-void WorldGenerator::remesh(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chunk *chunksouth, Chunk *chunkeast, Chunk *chunkwest)
+void WorldGenerator::remesh(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, Chunk *chunknorth, Chunk *chunksouth, Chunk *chunkeast, Chunk *chunkwest, bool instant)
 {
     Message m;
     m.m_type = Message::REMESH;
@@ -77,7 +77,10 @@ void WorldGenerator::remesh(Chunk *chunk, Chunk *chunkabove, Chunk *chunkbelow, 
         chunkeast->lock_delete();
     if(chunkwest)
         chunkwest->lock_delete();
-    queue.push(m);
+    if(instant)
+        queue.push_front(m);
+    else
+        queue.push(m);
 }
 
 void WorldGenerator::worker()
@@ -167,7 +170,7 @@ void WorldGenerator::remesh_f(Message &m)
 {
     Chunk *chunk = m.data.remesh.chunk;
 
-    chunk->lock(Chunk::READ);
+    chunk->lock(RWLock::READ);
     chunk->remesh(m.data.remesh.chunkabove,
                   m.data.remesh.chunkbelow,
                   m.data.remesh.chunknorth,

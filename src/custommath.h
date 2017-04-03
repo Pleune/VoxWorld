@@ -1,6 +1,8 @@
 #ifndef CUSTOMMATH_H
 #define CUSTOMMATH_H
 
+#define MODULO(a, b) (((a) % (b) + (b)) % (b))
+
 typedef struct {
 	int x;
 	int y;

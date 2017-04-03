@@ -39,6 +39,7 @@ World::~World()
     stopthreads = true;
     client_tick_t->join();
     chunks_for_render_m.lock();
+    chunks_rwl.lock(RWLock::WRITE);
     delete generator;
     if(chunks_for_render)
         delete chunks_for_render;
@@ -47,6 +48,7 @@ World::~World()
         while(!it->second->can_delete()) SDL_Delay(2);
         delete it->second;
     }
+    chunks_rwl.unlock();
     delete client_tick_t;
     delete chunk_generator;
 }
@@ -229,7 +231,9 @@ std::list<Chunk *> World::client_tick_maploop(const long3_t &center)
             if(dist > radius)
             {
                 chunks_for_delete.push_back(chnk);
+                chunks_rwl.lock(RWLock::WRITE);
                 it = chunks.erase(it);
+                chunks_rwl.unlock();
             } else {
                 render_vec->push_back(it->second);
 
@@ -279,13 +283,16 @@ std::list<Chunk *> World::client_tick_maploop(const long3_t &center)
 
                         if(chunkabove && chunkbelow && chunknorth && chunksouth && chunkeast && chunkwest)
                         {
+                            chnk->lock(RWLock::READ);
                             generator->remesh(chnk,
                                              chunkabove,
                                              chunkbelow,
                                              chunknorth,
                                              chunksouth,
                                              chunkeast,
-                                             chunkwest);
+                                             chunkwest,
+                                             false);
+                            chnk->unlock();
 
                             chnk->gen_inc();
                         }
@@ -399,4 +406,324 @@ void World::client_tick_func(SDL_GLContext glcon)
     }
 
     SDL_GL_DeleteContext(glcon);
+}
+
+Block::ID World::get(long x, long y, long z)
+{
+    int sizei = Chunk::size();
+    float size = sizei;
+    chunks_rwl.lock(RWLock::READ);
+    auto it = chunks.find({(long)std::floor(x/size),
+                (long)std::floor(y/size),
+                (long)std::floor(z/size)});
+    chunks_rwl.unlock();
+
+    if(it == chunks.end())
+        return Block::AIR;
+
+    it->second->lock(RWLock::READ);
+    auto ret = it->second->get(MODULO(x, sizei), MODULO(y, sizei), MODULO(z, sizei));
+    it->second->unlock();
+
+    return ret;
+}
+
+void World::set(Block::ID id, long x, long y, long z, bool update)
+{
+    int sizei = Chunk::size();
+    float size = sizei;
+    chunks_rwl.lock(RWLock::READ);
+    auto it = chunks.find({(long)std::floor(x/size),
+                (long)std::floor(y/size),
+                (long)std::floor(z/size)});
+    chunks_rwl.unlock();
+
+    if(it == chunks.end())
+        return;
+
+    Chunk* chnk = it->second;
+
+    chnk->lock(RWLock::WRITE);
+    chnk->set(MODULO(x, sizei), MODULO(y, sizei), MODULO(z, sizei), id);
+    if(update)
+    {
+        long3_t cpos = chnk->cpos();
+
+        chunks_rwl.lock(RWLock::READ);
+        ChunkMap::iterator end = chunks.end();
+        ChunkMap::iterator it_a = chunks.find({cpos.x, cpos.y+1, cpos.z});
+        ChunkMap::iterator it_b = chunks.find({cpos.x, cpos.y-1, cpos.z});
+        ChunkMap::iterator it_n = chunks.find({cpos.x, cpos.y, cpos.z-1});
+        ChunkMap::iterator it_s = chunks.find({cpos.x, cpos.y, cpos.z+1});
+        ChunkMap::iterator it_e = chunks.find({cpos.x+1, cpos.y, cpos.z});
+        ChunkMap::iterator it_w = chunks.find({cpos.x-1, cpos.y, cpos.z});
+        chunks_rwl.unlock();
+
+        Chunk *chunkabove = it_a == end ? 0 : it_a->second;
+        Chunk *chunkbelow = it_b == end ? 0 : it_b->second;
+        Chunk *chunknorth = it_n == end ? 0 : it_n->second;
+        Chunk *chunksouth = it_s == end ? 0 : it_s->second;
+        Chunk *chunkeast = it_e == end ? 0 : it_e->second;
+        Chunk *chunkwest = it_w == end ? 0 : it_w->second;
+
+        generator->remesh(chnk,
+                     chunkabove,
+                     chunkbelow,
+                     chunknorth,
+                     chunksouth,
+                     chunkeast,
+                     chunkwest,
+                     true);
+        chnk->gen_inc();
+    }
+
+    it->second->unlock();
+}
+
+World::BlockIterator::BlockIterator(World& ref, long3_t pos)
+    :ref(ref), chnk(0)
+{
+    sizei = Chunk::size();
+    size = sizei;
+
+    cpos ={(int)std::floor(pos.x/size),
+                (int)std::floor(pos.y/size),
+                (int)std::floor(pos.z/size)};
+    ipos = {(int)MODULO(pos.x, sizei), (int)MODULO(pos.y, sizei), (int)MODULO(pos.z, sizei)};
+}
+
+World::BlockIterator::~BlockIterator()
+{
+    if(chnk)
+        chnk->unlock_delete();
+}
+
+bool World::BlockIterator::update_chnk()
+{
+    if(chnk)
+        chnk->unlock_delete();
+
+    ref.chunks_rwl.lock(RWLock::READ);
+    auto it = ref.chunks.find(cpos);
+    ref.chunks_rwl.unlock();
+    if(it == ref.chunks.end())
+    {
+        chnk = 0;
+        return false;
+    }
+    chnk = it->second;
+    chnk->lock_delete();
+    return true;
+}
+
+void World::BlockIterator::move(int3_t delta)
+{
+    ipos.x += delta.x;
+    ipos.y += delta.y;
+    ipos.z += delta.z;
+
+    bool cpos_changed;
+
+    while(ipos.x >= sizei)
+    {
+        ipos.x -= sizei;
+        cpos.x++;
+        cpos_changed = true;
+    }
+    while(ipos.y >= sizei)
+    {
+        ipos.y -= sizei;
+        cpos.y++;
+        cpos_changed = true;
+    }
+    while(ipos.z >= sizei)
+    {
+        ipos.z -= sizei;
+        cpos.z++;
+        cpos_changed = true;
+    }
+
+    while(ipos.x < 0)
+    {
+        ipos.x += sizei;
+        cpos.x--;
+        cpos_changed = true;
+    }
+    while(ipos.y < 0)
+    {
+        ipos.y += sizei;
+        cpos.y--;
+        cpos_changed = true;
+    }
+    while(ipos.z < 0)
+    {
+        ipos.z += sizei;
+        cpos.z--;
+        cpos_changed = true;
+    }
+
+    if(cpos_changed)
+    {
+        if(chnk) chnk->unlock_delete();
+        chnk = 0;
+    }
+}
+
+Block::ID World::BlockIterator::get()
+{
+    if(chnk == 0)
+        if(!update_chnk())
+            return Block::AIR;
+
+    chnk->lock(RWLock::READ);
+    auto ret = chnk->get(ipos.x, ipos.y, ipos.z);
+    chnk->unlock();
+
+    return ret;
+}
+
+void World::BlockIterator::set(Block::ID id, bool update)
+{
+    if(chnk == 0)
+        if(!update_chnk())
+            return;
+
+    chnk->lock(RWLock::WRITE);
+    chnk->set(ipos.x, ipos.y, ipos.z, id);
+    if(update)
+    {
+        long3_t cpos = chnk->cpos();
+
+        ref.chunks_rwl.lock(RWLock::READ);
+        ChunkMap::iterator end = ref.chunks.end();
+        ChunkMap::iterator it_a = ref.chunks.find({cpos.x, cpos.y+1, cpos.z});
+        ChunkMap::iterator it_b = ref.chunks.find({cpos.x, cpos.y-1, cpos.z});
+        ChunkMap::iterator it_n = ref.chunks.find({cpos.x, cpos.y, cpos.z-1});
+        ChunkMap::iterator it_s = ref.chunks.find({cpos.x, cpos.y, cpos.z+1});
+        ChunkMap::iterator it_e = ref.chunks.find({cpos.x+1, cpos.y, cpos.z});
+        ChunkMap::iterator it_w = ref.chunks.find({cpos.x-1, cpos.y, cpos.z});
+        ref.chunks_rwl.unlock();
+
+        Chunk *chunkabove = it_a == end ? 0 : it_a->second;
+        Chunk *chunkbelow = it_b == end ? 0 : it_b->second;
+        Chunk *chunknorth = it_n == end ? 0 : it_n->second;
+        Chunk *chunksouth = it_s == end ? 0 : it_s->second;
+        Chunk *chunkeast = it_e == end ? 0 : it_e->second;
+        Chunk *chunkwest = it_w == end ? 0 : it_w->second;
+
+        ref.generator->remesh(chnk,
+                     chunkabove,
+                     chunkbelow,
+                     chunknorth,
+                     chunksouth,
+                     chunkeast,
+                     chunkwest,
+                     true);
+        chnk->gen_inc();
+    }
+    chnk->unlock();
+}
+
+long3_t World::blockpick_ref(vec3_t start, vec3_t dir, bool before, float dist)
+{
+    long3_t p;
+    p.x = floorf(start.x);
+    p.y = floorf(start.y);
+    p.z = floorf(start.z);
+
+    BlockIterator it = iterator(p);
+
+    vec3_t b;
+    b.x = start.x - p.x;
+    b.y = start.y - p.y;
+    b.z = start.z - p.z;
+
+    int dirx = dir.x > 0 ? 1 : -1;
+    int diry = dir.y > 0 ? 1 : -1;
+    int dirz = dir.z > 0 ? 1 : -1;
+
+    int3_t iszero = {
+        dir.x == 0,
+        dir.y == 0,
+        dir.z == 0
+    };
+
+    vec3_t rt;
+    vec3_t delta = {0, 0, 0};
+    if(!iszero.x)
+    {
+        rt.y = dir.y / dir.x;
+        rt.z = dir.z / dir.x;
+        delta.x = sqrtf(1 + rt.y*rt.y + rt.z*rt.z);
+    }
+    if(!iszero.y)
+    {
+        rt.x = dir.x / dir.y;
+        rt.z = dir.z / dir.y;
+        delta.y = sqrtf(rt.x*rt.x + 1 + rt.z*rt.z);
+    }
+    if(!iszero.z)
+    {
+        rt.x = dir.x / dir.z;
+        rt.y = dir.y / dir.z;
+        delta.z = sqrtf(rt.x*rt.x + rt.y*rt.y + 1);
+    }
+
+    vec3_t max = {
+        delta.x * (dir.x > 0 ? (1 - b.x) : b.x),
+        delta.y * (dir.y > 0 ? (1 - b.y) : b.y),
+        delta.z * (dir.z > 0 ? (1 - b.z) : b.z)
+    };
+
+    int i;
+    for(i=0; i<dist; i++)
+    {
+        if((max.x <= max.y || iszero.y) && (max.x <= max.z || iszero.z) && !iszero.x)
+        {
+            max.x += delta.x;
+            it.move({dirx, 0, 0});//p.x += dirx;
+            if(Block::is_solid(it.get()))
+            {
+                if(before)
+                    it.move({-dirx, 0, 0});//p.x -= dirx;
+                break;
+            }
+        }
+        else if((max.y <= max.x || iszero.x) && (max.y <= max.z || iszero.z) && !iszero.y)
+        {
+            max.y += delta.y;
+            it.move({0, diry, 0});//p.y += diry;
+            if(Block::is_solid(it.get()))
+            {
+                if(before)
+                    it.move({0, -diry, 0});//p.y -= diry;
+                break;
+            }
+        }
+        else if((max.z <= max.x || iszero.x) && (max.z <= max.y || iszero.y) && !iszero.z)
+        {
+            max.z += delta.z;
+            it.move({0, 0, dirz});//p.z += dirz;
+            if(Block::is_solid(it.get()))
+            {
+                if(before)
+                    it.move({0, 0, -dirz});//p.z -= dirz;
+                break;
+            }
+        }
+    }
+
+    return it.pos();
+}
+
+Block::ID World::blockpick_get(vec3_t start, vec3_t dir, bool before, float dist)
+{
+    long3_t p = blockpick_ref(start, dir, before, dist);
+    return get(p.x, p.y, p.z);
+}
+
+void World::blockpick_set(Block::ID id, vec3_t start, vec3_t dir, bool before, float dist, bool update)
+{
+    long3_t p = blockpick_ref(start, dir, before, dist);
+    set(id, p.x, p.y, p.z, update);
 }

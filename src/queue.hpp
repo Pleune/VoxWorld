@@ -15,6 +15,20 @@ public:
         condition.notify_one();
     };
 
+    void push_front(T value)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if(queue.empty())
+        {
+            queue.push(value);
+        } else {
+            T first = queue.front();
+            queue.front() = value;
+            queue.push(first);
+        }
+        condition.notify_one();
+    }
+
     void pop(T &value)
     {
         std::unique_lock<std::mutex> lock(mutex);

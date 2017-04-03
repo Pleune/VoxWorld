@@ -34,7 +34,7 @@ void ChunkGeneratorHeightmap::Heightmap::set(int x, int z, float val)
 
 void ChunkGeneratorHeightmap::generate(Chunk *target)
 {
-    target->lock(Chunk::WRITE);
+    target->lock(RWLock::WRITE);
 
     long3_t cpos = target->cpos();
 

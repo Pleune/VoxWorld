@@ -97,6 +97,16 @@ void StateTest::input()
     camera.pos.x += rotatevec.x;
     camera.pos.y += rotatevec.y;
     camera.pos.z += rotatevec.z;
+
+    if(keyboard[SDL_SCANCODE_X])
+        for(float x = -1; x < 1; x+=.1)
+            for(float y = -1; y < 1; y+=.1)
+                for(float z = -1; z < 1; z+=.1)
+                    world->blockpick_set(Block::AIR, camera.pos, {x, y, z}, false, 40, false);
+
+    if(keyboard[SDL_SCANCODE_E])
+        for(int i=0; i<10; i++)
+            world->blockpick_set(Block::SAND, camera.pos, camera.forward, true, 200, false);
 }
 
 void StateTest::run(GameEngine *engine)
@@ -142,7 +152,16 @@ void StateTest::event(SDL_Event *e)
                 SDL_SetRelativeMouseMode(SDL_TRUE);
                 takeinput = true;
             }
+            break;
         }
+    }
+
+    else if(e->type == SDL_MOUSEBUTTONDOWN)
+    {
+        if(e->button.button == SDL_BUTTON_LEFT)
+            world->blockpick_set(Block::SAND, camera.pos, camera.forward, true, 1000, true);
+        else if(e->button.button == SDL_BUTTON_RIGHT)
+            world->blockpick_set(Block::AIR, camera.pos, camera.forward, false, 1000, true);
     }
 
     else if(e->type == SDL_WINDOWEVENT)

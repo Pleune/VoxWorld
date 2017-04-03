@@ -1,5 +1,6 @@
 #include "chunk.hpp"
 
+#include <random>
 #include <vector>
 #include <GL/glew.h>
 #include "block.hpp"
@@ -360,24 +361,31 @@ Chunk::Status Chunk::init(GLuint draw_program)
     GLfloat *vertices_pos = new GLfloat[buffer_len];
     GLfloat *vertices_color = new GLfloat[buffer_len];
 
+    std::random_device rd;
+    std::default_random_engine rand_gen(rd());
+    std::uniform_int_distribution<int> dist (-10, 10);
+
+    float wobble[side_len][side_len][side_len][3];
+    for(size_t i=0; i<side_len*side_len*side_len*3; i++)
+        reinterpret_cast<float *>(wobble)[i] = dist(rand_gen) / 230.0f;
+
     int i = 0;
     for(int id = 0; id<NUM_BLOCK_TYPES; id++)
     for(int z = 0; z<side_len_p1; z++)
     for(int y = 0; y<side_len_p1; y++)
     for(int x = 0; x<side_len_p1; x++)
     {
-        //TODO: render wobble
         SDL_Color color = Block::color(id);
 
-        vertices_pos[i] = x;// + ((int)(noise3D(x%(side_len), y%(side_len), z%(side_len), 1) % 100) - 50) * (RENDER_WOBBLE / 100.0f);
+        vertices_pos[i] = x + wobble[x == side_len ? 0 : x][y == side_len ? 0 : y][z == side_len ? 0 : z][0];
         vertices_color[i] = color.r / 255.0;
         ++i;
 
-        vertices_pos[i] = y;// + ((int)(noise3D(y%(side_len), z%(side_len), x%(side_len), 1) % 100) - 50) * (RENDER_WOBBLE / 100.0f);
+        vertices_pos[i] = y + wobble[x == side_len ? 0 : x][y == side_len ? 0 : y][z == side_len ? 0 : z][1];
         vertices_color[i] = color.g / 255.0;
         ++i;
 
-        vertices_pos[i] = z;// + ((int)(noise3D(z%(side_len), x%(side_len), y%(side_len), 1) % 100) - 50) * (RENDER_WOBBLE / 100.0f);
+        vertices_pos[i] = z + wobble[x == side_len ? 0 : x][y == side_len ? 0 : y][z == side_len ? 0 : z][2];
         vertices_color[i] = color.b / 255.0;
         ++i;
     }

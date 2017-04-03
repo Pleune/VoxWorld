@@ -191,6 +191,8 @@ void World::render(Camera camera)
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, renderbuffer.depthbuffer);
 
+    glEnableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 

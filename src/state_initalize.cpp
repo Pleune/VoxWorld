@@ -1,5 +1,6 @@
 #include "state_initalize.hpp"
 
+#include <functional>
 #include <cstdlib>
 #include <ctime>
 #include <SDL_ttf.h>

@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <vector>
 #include <list>
+#include <functional>
 #include "chunk.hpp"
 #include "worldgenerator.hpp"
 #include "limiter.hpp"

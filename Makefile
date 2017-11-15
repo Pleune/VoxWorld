@@ -11,8 +11,8 @@ ifeq ($(OS),Windows_NT)
 else
 #	UNAME_S := $(shell uname -s)
 #	ifeq ($(UNAME_S),Linux)
-		CFLAGS:= -g -O3 -Wall $(shell pkg-config --cflags sdl2 SDL2_ttf gl glew zlib) -fsanitize=address --no-omit-frame-pointer
-		LFLAGS:= -g -fsanitize=address
+		CFLAGS:= -g -O3 -Wall $(shell pkg-config --cflags sdl2 SDL2_ttf gl glew zlib) -fsanitize=address --no-omit-frame-pointer -std=c++11
+		LFLAGS:= -g -fsanitize=address -std=c++11
 		LIBS:= -lm $(shell pkg-config --libs sdl2 SDL2_ttf gl glew zlib) -pthread
 #	endif
 #	ifeq ($(UNAME_S),Darwin)
